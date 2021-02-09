@@ -57,7 +57,7 @@ function safe_install() {
     # prevent stale becuase of db lock
     [[ -f "/var/lib/pacman/db.lck" ]] && sudo rm -rf /var/lib/pacman/db.lck
 
-    yes | sudo pacman -Syy --needed $@ >/dev/null 2>&1 >/tmp/installation.log
+    yes | sudo pacman -Syu $@ >/dev/null 2>&1 >/tmp/installation.log
     if [[ $? == 1 ]]; then
         conflict_files=$(cat /tmp/installation.log | grep "exists in filesystem" | grep -o '/[^ ]*')
         if [[ ${#conflict_files[@]} -gt 0 ]]; then
@@ -65,7 +65,23 @@ function safe_install() {
                 [[ -f ${conflict_files[$i]} ]] && sudo rm -rf ${conflict_files[$i]}
             done
         fi
+        
+        conflict_packages=$(cat /tmp/installation.log | grep "are in conflict. Remove" | grep -o 'Remove [^ ]*' | grep -oE '[^ ]+$' | sed -e "s/[?]//");
+        if [[ ${#conflict_packages[@]} -gt 0 ]]; then
+            for ((i = 0; i < ${#conflict_packages[@]}; i++)); do
+                yes | sudo pacman -Rdd ${conflict_packages[$i]}
+            done
+        fi
+
+        breakers=$(cat /tmp/installation.log | grep " breaks dependency " | grep -o 'required by [^ ]*' | grep -oE '[^ ]+$')
+        if [[ ${#breakers[@]} -gt 0 ]]; then
+            for ((i = 0; i < ${#breakers[@]}; i++)); do
+                yes | sudo pacman -Rdd ${breakers[$i]}
+            done
+        fi
+
         safe_install $@
+        
     fi
 }
 
@@ -86,6 +102,10 @@ function install_themes() {
         koompi-theme-manager-qt5 latte-dock
 }
 
+function apply_new_theme() {
+    sh /usr/share/org.koompi.theme.manager/kmp-dark.sh >/dev/null 2>&1
+}
+
 sudo -v
 echo -e "====================================================================== "
 echo -e " ██╗  ██╗ ██████╗  ██████╗ ███╗   ███╗██████╗ ██╗     ██████╗ ███████╗ "
@@ -98,9 +118,9 @@ echo -e "====================================================================== 
 echo -e "Version: 2.6.0"
 echo -e "Prepareing for updates..."
 
-# (refresh_mirror) &
-# spinner "Refreshing mirrors..."
-# echo -e ""
+(refresh_mirror) &
+spinner "Refreshing mirrors..."
+echo -e ""
 (remove_orphans) &
 spinner "Remove orphans packages..."
 echo -e ""
@@ -119,7 +139,8 @@ echo -e ""
 (install_themes) &
 spinner "Installing new applications..."
 echo -e ""
-
+(apply_new_theme) &
+spinner "Applying new UX/UI"
 echo -e "====================================================================== "
 echo -e "Upgraded to version 2.6.0"
 echo -e "Please restart your computer before continue using."
