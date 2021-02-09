@@ -59,29 +59,31 @@ function safe_install() {
 
     yes | sudo pacman -Syu $@ >/dev/null 2>&1 >/tmp/installation.log
     if [[ $? == 1 ]]; then
+        find /var/cache/pacman/pkg/ -iname "*.part" -delete >/dev/null 2>&1
+
         conflict_files=$(cat /tmp/installation.log | grep "exists in filesystem" | grep -o '/[^ ]*')
         if [[ ${#conflict_files[@]} -gt 0 ]]; then
             for ((i = 0; i < ${#conflict_files[@]}; i++)); do
-                [[ -f ${conflict_files[$i]} ]] && sudo rm -rf ${conflict_files[$i]}
+                [[ -f ${conflict_files[$i]} ]] && sudo rm -rf ${conflict_files[$i]} >/dev/null 2>&1
             done
         fi
-        
-        conflict_packages=$(cat /tmp/installation.log | grep "are in conflict. Remove" | grep -o 'Remove [^ ]*' | grep -oE '[^ ]+$' | sed -e "s/[?]//");
+
+        conflict_packages=$(cat /tmp/installation.log | grep "are in conflict. Remove" | grep -o 'Remove [^ ]*' | grep -oE '[^ ]+$' | sed -e "s/[?]//")
         if [[ ${#conflict_packages[@]} -gt 0 ]]; then
             for ((i = 0; i < ${#conflict_packages[@]}; i++)); do
-                yes | sudo pacman -Rdd ${conflict_packages[$i]}
+                yes | sudo pacman -Rdd ${conflict_packages[$i]} >/dev/null 2>&1
             done
         fi
 
         breakers=$(cat /tmp/installation.log | grep " breaks dependency " | grep -o 'required by [^ ]*' | grep -oE '[^ ]+$')
         if [[ ${#breakers[@]} -gt 0 ]]; then
             for ((i = 0; i < ${#breakers[@]}; i++)); do
-                yes | sudo pacman -Rdd ${breakers[$i]}
+                yes | sudo pacman -Rdd ${breakers[$i]} >/dev/null 2>&1
             done
         fi
 
         safe_install $@
-        
+
     fi
 }
 
@@ -99,7 +101,9 @@ function install_themes() {
         fluent-decoration-git \
         kvantum-qt5 \
         kvantum-theme-fluent-git \
-        koompi-theme-manager-qt5 latte-dock
+        koompi-theme-manager-qt5 \
+        latte-dock \
+        koompi-pacman-hooks
 }
 
 function apply_new_theme() {
@@ -140,7 +144,8 @@ echo -e ""
 spinner "Installing new applications..."
 echo -e ""
 (apply_new_theme) &
-spinner "Applying new UX/UI"
+spinner "Applying new UX/UI..."
+echo -e ""
 echo -e "====================================================================== "
 echo -e "Upgraded to version 2.6.0"
 echo -e "Please restart your computer before continue using."
