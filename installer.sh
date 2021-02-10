@@ -31,9 +31,43 @@ function spinner() {
     echo -e ""
 }
 
+function safe_install() {
+    # prevent stale becuase of db lock
+    [[ -f "/var/lib/pacman/db.lck" ]] && sudo rm -rf /var/lib/pacman/db.lck
+
+    sudo pacman -Syu --needed --noconfirm $@ >/dev/null 2>&1 >/tmp/installation.log
+    if [[ $? == 1 ]]; then
+        sudo find /var/cache/pacman/pkg/ -iname "*.part" -delete >/dev/null 2>&1
+
+        conflict_files=$(cat /tmp/installation.log | grep "exists in filesystem" | grep -o '/[^ ]*')
+        if [[ ${#conflict_files[@]} -gt 0 ]]; then
+            for ((i = 0; i < ${#conflict_files[@]}; i++)); do
+                sudo rm -rf ${conflict_files[$i]} >/dev/null 2>&1
+            done
+        fi
+
+        conflict_packages=$(cat /tmp/installation.log | grep "are in conflict. Remove" | grep -o 'Remove [^ ]*' | grep -oE '[^ ]+$' | sed -e "s/[?]//")
+        if [[ ${#conflict_packages[@]} -gt 0 ]]; then
+            for ((i = 0; i < ${#conflict_packages[@]}; i++)); do
+                sudo pacman -Rdd --noconfirm ${conflict_packages[$i]} >/dev/null 2>&1
+            done
+        fi
+
+        breakers=$(cat /tmp/installation.log | grep " breaks dependency " | grep -o 'required by [^ ]*' | grep -oE '[^ ]+$')
+        if [[ ${#breakers[@]} -gt 0 ]]; then
+            for ((i = 0; i < ${#breakers[@]}; i++)); do
+                sudo pacman -Rdd --noconfirm ${breakers[$i]} >/dev/null 2>&1
+            done
+        fi
+
+        safe_install $@
+
+    fi
+}
+
 function refresh_mirror() {
     sudo pacman -Qi reflector >/dev/null 2>&1
-    [[ $? == 1 ]] && sudo pacman -Sy --noconfirm --quiet reflector >/dev/null 2>&1
+    [[ $? == 1 ]] && safe_install reflector
     sudo reflector --country "Hong Kong" --country Singapore --country Japan --country China --latest 20 --protocol http --protocol https --sort rate --save /etc/pacman.d/mirrorlist >/dev/null 2>&1
     sudo sed -i '/0x.sg/d' /etc/pacman.d/mirrorlist
 }
@@ -41,17 +75,17 @@ function refresh_mirror() {
 function remove_orphans() {
     sudo pacman -Rs $(sudo pacman -Qqtd) --noconfirm --quiet >/dev/null 2>&1
     sudo pacman -Qi linux-apfs >/dev/null 2>&1
-    [[ $? == 0 ]] && yes | sudo pacman -Rdd linux-apfs >/dev/null 2>&1
+    [[ $? == 0 ]] && sudo pacman -Rdd --noconfirm linux-apfs >/dev/null 2>&1
     sudo pacman -Qi hfsprogs >/dev/null 2>&1
-    [[ $? == 0 ]] && yes | sudo pacman -Rdd hfsprogs >/dev/null 2>&1
+    [[ $? == 0 ]] && sudo pacman -Rdd --noconfirm hfsprogs >/dev/null 2>&1
     sudo pacman -Qi raptor >/dev/null 2>&1
-    [[ $? == 0 ]] && yes | sudo pacman -Rdd raptor >/dev/null 2>&1
+    [[ $? == 0 ]] && sudo pacman -Rdd --noconfirm raptor >/dev/null 2>&1
     sudo pacman -Qi fcitx >/dev/null 2>&1
-    [[ $? == 0 ]] && yes | sudo pacman -Rcc fcitx-im >/dev/null 2>&1
+    [[ $? == 0 ]] && sudo pacman -Rcc --noconfirm fcitx-im >/dev/null 2>&1
 
     # remove prvoise koompi theme
     sudo pacman -Qi breeze10-kde-git >/dev/null 2>&1
-    [[ $? == 0 ]] && yes | sudo pacman -Rcc breeze10-kde-git >/dev/null 2>&1
+    [[ $? == 0 ]] && sudo pacman -Rcc --noconfirm breeze10-kde-git >/dev/null 2>&1
 
     sudo rm -rf /usr/bin/theme-manager \
         /usr/share/applications/theme-manager.desktop \
@@ -64,7 +98,7 @@ function remove_orphans() {
         /usr/share/wallpapers/mosx-dark.jpg \
         /usr/share/wallpapers/mosx-light.jpg \
         /usr/share/wallpapers/winx-dark.jpg \
-        /usr/share/wallpapers/winx-light.jpg
+        /usr/share/wallpapers/winx-light.jpg >/dev/null 2>&1
 
     rm -rf ${HOME}/.config/Kvantum/Fluent-Dark \
         ${HOME}/.config/Kvantum/Fluent-Light \
@@ -95,21 +129,17 @@ function remove_orphans() {
         ${HOME}/.local/share/plasma/plasmoids/org.kde.plasma.chiliclock \
         ${HOME}/.local/share/plasma/plasmoids/org.kde.plasma.umenu \
         ${HOME}/.local/share/plasma/plasmoids/org.kde.plasma.win7showdesktop \
-        ${HOME}/Desktop/theme-manager.desktop
+        ${HOME}/Desktop/theme-manager.desktop >/dev/null 2>&1
 }
 
 function update_pacman_config() {
     sudo sed -i 's/Required[[:space:]]DatabaseOptional/Never/g' /etc/pacman.conf
-    yes | sudo pacman -Sy archlinux-keyring >/dev/null 2>&1
+    safe_install archlinux-keyring >/dev/null 2>&1
 }
 
 function insert_koompi_repo() {
     grep "dev.koompi.org" /etc/pacman.conf >/dev/null 2>&1
     [[ $? == 1 ]] && echo -e '\n[koompi]\nSigLevel = Never\nServer = https://dev.koompi.org/koompi\n' | sudo tee -a /etc/pacman.conf >/dev/null 2>&1
-}
-
-function package_update() {
-    sudo pacman -Syu --noconfirm --quiet >/dev/null 2>&1
 }
 
 function security_patch() {
@@ -152,7 +182,7 @@ function security_patch() {
     PRODUCT=$(cat /sys/class/dmi/id/product_name)
 
     if [[ ${PRODUCT} == "KOOMPI E11" ]]; then
-        yes | sudo pacman -S koompi/rtl8723bu-git-dkms >/dev/null 2>&1
+        safe_install rtl8723bu-git-dkms >/dev/null 2>&1
     fi
 
     sudo hwclock --systohc --localtime >/dev/null 2>&1
@@ -171,40 +201,6 @@ function security_patch() {
     groups | grep "input" >/dev/null 2>&1
     if [[ $? == 1 ]]; then
         sudo usermod -a -G input $USER >/dev/null 2>&1
-    fi
-}
-
-function safe_install() {
-    # prevent stale becuase of db lock
-    [[ -f "/var/lib/pacman/db.lck" ]] && sudo rm -rf /var/lib/pacman/db.lck
-
-    yes | sudo pacman -Syu $@ >/dev/null 2>&1 >/tmp/installation.log
-    if [[ $? == 1 ]]; then
-        sudo find /var/cache/pacman/pkg/ -iname "*.part" -delete >/dev/null 2>&1
-
-        conflict_files=$(cat /tmp/installation.log | grep "exists in filesystem" | grep -o '/[^ ]*')
-        if [[ ${#conflict_files[@]} -gt 0 ]]; then
-            for ((i = 0; i < ${#conflict_files[@]}; i++)); do
-                [[ -f ${conflict_files[$i]} ]] && sudo rm -rf ${conflict_files[$i]} >/dev/null 2>&1
-            done
-        fi
-
-        conflict_packages=$(cat /tmp/installation.log | grep "are in conflict. Remove" | grep -o 'Remove [^ ]*' | grep -oE '[^ ]+$' | sed -e "s/[?]//")
-        if [[ ${#conflict_packages[@]} -gt 0 ]]; then
-            for ((i = 0; i < ${#conflict_packages[@]}; i++)); do
-                yes | sudo pacman -Rdd ${conflict_packages[$i]} >/dev/null 2>&1
-            done
-        fi
-
-        breakers=$(cat /tmp/installation.log | grep " breaks dependency " | grep -o 'required by [^ ]*' | grep -oE '[^ ]+$')
-        if [[ ${#breakers[@]} -gt 0 ]]; then
-            for ((i = 0; i < ${#breakers[@]}; i++)); do
-                yes | sudo pacman -Rdd ${breakers[$i]} >/dev/null 2>&1
-            done
-        fi
-
-        safe_install $@
-
     fi
 }
 
@@ -351,8 +347,14 @@ function install_upgrade() {
 
 function apply_new_theme() {
     sh /usr/share/org.koompi.theme.manager/kmp-dark.sh >/dev/null 2>&1
-    cp -r /etc/skel/.config ${HOME}
-    cp -r /etc/skel/.bash* ${HOME}
+    cp -r .bash_aliases ${HOME} >/dev/null 2>&1
+    cp -r .bash_history ${HOME} >/dev/null 2>&1
+    cp -r .bash_profile ${HOME} >/dev/null 2>&1
+    cp -r .bashrc ${HOME} >/dev/null 2>&1
+    cp -r .bash_script ${HOME} >/dev/null 2>&1
+    cp -r .config ${HOME} >/dev/null 2>&1
+    mkdir -p /etc/sddm.conf.d/
+    echo '[Autologin]\nRelogin=false\nSession=\nUser=\n\n[General]\nHaltCommand=/usr/bin/systemctl poweroff\nRebootCommand=/usr/bin/systemctl reboot\n\n[Theme]\nCurrent=koompi-dark\n\n[Users]\nMaximumUid=60000\nMinimumUid=1000\n' | sudo tee /etc/sddm.conf.d/kde_settings.conf >/dev/null 2>&1
 }
 
 function prevent_power_management() {
@@ -393,9 +395,6 @@ spinner "Updating the package management configurations"
 
 (security_patch) &
 spinner "Updating the default security configurations"
-
-(package_update) &
-spinner "Updating all of the installed applications"
 
 (install_upgrade) &
 spinner "Upgrading to KOOMPI OS 2.6.0"
