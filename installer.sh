@@ -356,6 +356,14 @@ function apply_new_theme() {
     cp -r /etc/skel/.bash* ${HOME}
 }
 
+function prevent_power_management() {
+    sudo systemctl --quiet --runtime mask halt.target poweroff.target reboot.target kexec.target suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target sleep.target >/dev/null 2>&1
+}
+
+function allow_power_management() {
+    sudo systemctl --quiet --runtime unmask halt.target poweroff.target reboot.target kexec.target suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target sleep.target >/dev/null 2>&1
+}
+
 sudo -v
 echo -e "${CYAN}====================================================================== ${NC}"
 echo -e "${CYAN} ██╗  ██╗ ██████╗  ██████╗ ███╗   ███╗██████╗ ██╗     ██████╗ ███████╗ ${NC}"
@@ -368,6 +376,9 @@ echo -e "${CYAN}================================================================
 echo -e ""
 echo -e "Upgrade to version 2.6.0"
 echo -e "Initialzing generation upgrade"
+echo -e ""
+prevent_power_management
+echo -e "${RED}NOTE: During update, do not turn off your computer.${NC}"
 echo -e ""
 (refresh_mirror) &
 spinner "Ranking mirror repositories"
