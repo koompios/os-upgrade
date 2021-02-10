@@ -404,6 +404,7 @@ spinner "Upgrading to KOOMPI OS 2.6.0"
 (apply_new_theme) &
 spinner "Applying generation upgrade"
 echo -e ""
+allow_power_management
 echo -e "${CYAN}====================================================================== ${NC}"
 echo -e ""
 echo -e "${GREEN}Upgraded to version 2.6.0${NC}"
