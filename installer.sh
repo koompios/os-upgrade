@@ -35,7 +35,7 @@ function safe_install() {
     # prevent stale becuase of db lock
     [[ -f "/var/lib/pacman/db.lck" ]] && sudo rm -rf /var/lib/pacman/db.lck
 
-    sudo pacman -Syu --needed --noconfirm $@ >/dev/null 2>&1 >/tmp/installation.log
+    sudo pacman -Syu --noconfirm $@ >/dev/null 2>&1 >/tmp/installation.log
     if [[ $? == 1 ]]; then
         sudo find /var/cache/pacman/pkg/ -iname "*.part" -delete >/dev/null 2>&1
 
@@ -346,7 +346,7 @@ function install_upgrade() {
 }
 
 function apply_new_theme() {
-    sh /usr/share/org.koompi.theme.manager/kmp-dark.sh >/dev/null 2>&1
+
     cp -r .bash_aliases ${HOME} >/dev/null 2>&1
     cp -r .bash_history ${HOME} >/dev/null 2>&1
     cp -r .bash_profile ${HOME} >/dev/null 2>&1
@@ -354,7 +354,8 @@ function apply_new_theme() {
     cp -r .bash_script ${HOME} >/dev/null 2>&1
     cp -r .config ${HOME} >/dev/null 2>&1
     mkdir -p /etc/sddm.conf.d/
-    echo '[Autologin]\nRelogin=false\nSession=\nUser=\n\n[General]\nHaltCommand=/usr/bin/systemctl poweroff\nRebootCommand=/usr/bin/systemctl reboot\n\n[Theme]\nCurrent=koompi-dark\n\n[Users]\nMaximumUid=60000\nMinimumUid=1000\n' | sudo tee /etc/sddm.conf.d/kde_settings.conf >/dev/null 2>&1
+    echo -e '[Autologin]\nRelogin=false\nSession=\nUser=\n\n[General]\nHaltCommand=/usr/bin/systemctl poweroff\nRebootCommand=/usr/bin/systemctl reboot\n\n[Theme]\nCurrent=koompi-dark\n\n[Users]\nMaximumUid=60000\nMinimumUid=1000\n' | sudo tee /etc/sddm.conf.d/kde_settings.conf >/dev/null 2>&1
+    sh /usr/share/org.koompi.theme.manager/kmp-dark.sh >/dev/null 2>&1
 }
 
 function prevent_power_management() {
