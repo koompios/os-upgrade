@@ -255,7 +255,6 @@ function install_upgrade() {
         fcitx5-qt \
         fcitx5-chewing \
         fcitx5-chinese-addons \
-        fcitx5-rime \
         fcitx5-hangul \
         fcitx5-anthy \
         fcitx5-material-color \
