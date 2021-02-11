@@ -49,7 +49,7 @@ function safe_install() {
         conflict_packages=$(cat /tmp/installation.log | grep "are in conflict. Remove" | grep -o 'Remove [^ ]*' | grep -oE '[^ ]+$' | sed -e "s/[?]//")
         if [[ ${#conflict_packages[@]} -gt 0 ]]; then
             for ((i = 0; i < ${#conflict_packages[@]}; i++)); do
-                sudo pacman -Rdd --noconfirm ${conflict_packages[$i]} >/dev/null 2>&1
+                sudo pacman -Rcc --noconfirm ${conflict_packages[$i]} >/dev/null 2>&1
             done
         fi
 
@@ -74,9 +74,13 @@ function safe_install() {
 }
 
 function refresh_mirror() {
+    sudo sed -i 's/Required[[:space:]]DatabaseOptional/Never/g' /etc/pacman.conf >/dev/null 2>&1
+    sudo sed -i '/0x.sg/d' /etc/pacman.d/mirrorlist
+    sudo pacman -Sy --noconfirm archlinux-keyring >/dev/null 2>&1
+
     sudo pacman -Qi reflector >/dev/null 2>&1
     [[ $? == 1 ]] && sudo pacman -Sy reflector --noconfirm >/dev/null 2>&1
-    sudo reflector --country "Hong Kong" --country Singapore --country Japan --country China --latest 20 --protocol http --protocol https --sort rate --save /etc/pacman.d/mirrorlist >/dev/null 2>&1
+    sudo reflector --country "Hong Kong" --country Singapore --country Japan --country China --latest 20 --protocol https --sort rate --save /etc/pacman.d/mirrorlist >/dev/null 2>&1
     sudo sed -i '/0x.sg/d' /etc/pacman.d/mirrorlist
 }
 
@@ -138,11 +142,6 @@ function remove_orphans() {
         ${HOME}/.local/share/plasma/plasmoids/org.kde.plasma.umenu \
         ${HOME}/.local/share/plasma/plasmoids/org.kde.plasma.win7showdesktop \
         ${HOME}/Desktop/theme-manager.desktop >/dev/null 2>&1
-}
-
-function update_pacman_config() {
-    sudo sed -i 's/Required[[:space:]]DatabaseOptional/Never/g' /etc/pacman.conf
-    safe_install archlinux-keyring >/dev/null 2>&1
 }
 
 function insert_koompi_repo() {
@@ -398,9 +397,6 @@ spinner "Cleaning up unneed packages"
 
 (insert_koompi_repo) &
 spinner "Updating the new repository of KOOMPI OS"
-
-(update_pacman_config) &
-spinner "Updating the package management configurations"
 
 (security_patch) &
 spinner "Updating the default security configurations"
