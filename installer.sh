@@ -60,6 +60,14 @@ function safe_install() {
             done
         fi
 
+        satisfiers=$(cat /tmp/installation.log | grep "unable to satisfy dependency" | grep -oE '[^ ]+$')
+
+        if [[ ${#satisfiers[@]} -gt 0 ]]; then
+            for ((i = 0; i < ${#satisfiers[@]}; i++)); do
+                sudo pacman -Rdd --noconfirm ${satisfiers[$i]} >/dev/null 2>&1
+            done
+        fi
+
         safe_install $@
 
     fi
@@ -67,7 +75,7 @@ function safe_install() {
 
 function refresh_mirror() {
     sudo pacman -Qi reflector >/dev/null 2>&1
-    [[ $? == 1 ]] && safe_install reflector
+    [[ $? == 1 ]] && sudo pacman -Sy reflector --noconfirm >/dev/null 2>&1
     sudo reflector --country "Hong Kong" --country Singapore --country Japan --country China --latest 20 --protocol http --protocol https --sort rate --save /etc/pacman.d/mirrorlist >/dev/null 2>&1
     sudo sed -i '/0x.sg/d' /etc/pacman.d/mirrorlist
 }
