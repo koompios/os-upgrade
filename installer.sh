@@ -35,7 +35,7 @@ function safe_install() {
     # prevent stale becuase of db lock
     [[ -f "/var/lib/pacman/db.lck" ]] && sudo rm -rf /var/lib/pacman/db.lck
 
-    sudo pacman -Syu --noconfirm $@ >/dev/null 2>&1 >/tmp/installation.log
+    yes | sudo pacman -Syu $@ >/dev/null 2>&1 >/tmp/installation.log
     if [[ $? == 1 ]]; then
         sudo find /var/cache/pacman/pkg/ -iname "*.part" -delete >/dev/null 2>&1
 
