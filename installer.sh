@@ -49,7 +49,7 @@ function safe_install() {
         conflict_packages=$(cat /tmp/installation.log | grep "are in conflict. Remove" | grep -o 'Remove [^ ]*' | grep -oE '[^ ]+$' | sed -e "s/[?]//")
         if [[ ${#conflict_packages[@]} -gt 0 ]]; then
             for ((i = 0; i < ${#conflict_packages[@]}; i++)); do
-                sudo pacman -Rcc --noconfirm ${conflict_packages[$i]} >/dev/null 2>&1
+                yes | sudo pacman -Rcc ${conflict_packages[$i]} >/dev/null 2>&1
             done
         fi
 
