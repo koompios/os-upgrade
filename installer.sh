@@ -10,6 +10,10 @@ PURPEL='\033[0;35m'
 CYAN='\033[0;36m'
 YELLOW='\033[1;33m'
 
+retry=0
+continue=1
+completed=0
+
 function spinner() {
     local info="$1"
     local pid=$!
@@ -36,7 +40,7 @@ function safe_install() {
     [[ -f "/var/lib/pacman/db.lck" ]] && sudo rm -rf /var/lib/pacman/db.lck
 
     yes | sudo pacman -Syu $@ >/dev/null 2>&1 >/tmp/installation.log
-    if [[ $? == 1 ]]; then
+    if [[ $? -eq 1 ]]; then
         sudo find /var/cache/pacman/pkg/ -iname "*.part" -delete >/dev/null 2>&1
 
         conflict_files=$(cat /tmp/installation.log | grep "exists in filesystem" | grep -o '/[^ ]*')
@@ -56,21 +60,26 @@ function safe_install() {
         breakers=$(cat /tmp/installation.log | grep " breaks dependency " | grep -o 'required by [^ ]*' | grep -oE '[^ ]+$')
         if [[ ${#breakers[@]} -gt 0 ]]; then
             for ((i = 0; i < ${#breakers[@]}; i++)); do
-                sudo pacman -Rdd --noconfirm ${breakers[$i]} >/dev/null 2>&1
+                yes | sudo pacman -Rdd ${breakers[$i]} >/dev/null 2>&1
             done
         fi
 
         satisfiers=$(cat /tmp/installation.log | grep "unable to satisfy dependency" | grep -oE '[^ ]+$')
-
         if [[ ${#satisfiers[@]} -gt 0 ]]; then
             for ((i = 0; i < ${#satisfiers[@]}; i++)); do
-                sudo pacman -Rdd --noconfirm ${satisfiers[$i]} >/dev/null 2>&1
+                yes | sudo pacman -Rdd --noconfirm ${satisfiers[$i]} >/dev/null 2>&1
             done
         fi
+        cp /tmp/installation.log "/tmp/installation${retry}.log"
+        retry=$((retry + 1))
+        if [[ $retry -lt 20 ]]; then
+            safe_install $@
+        else
 
-        safe_install $@
+        fi
 
     fi
+
 }
 
 function refresh_mirror() {
@@ -79,25 +88,29 @@ function refresh_mirror() {
     sudo pacman -Sy --noconfirm archlinux-keyring >/dev/null 2>&1
 
     sudo pacman -Qi reflector >/dev/null 2>&1
-    [[ $? == 1 ]] && sudo pacman -Sy reflector --noconfirm >/dev/null 2>&1
+    [[ $? -eq 1 ]] && sudo pacman -Sy reflector --noconfirm >/dev/null 2>&1
     sudo reflector --country "Hong Kong" --country Singapore --country Japan --country China --latest 20 --protocol https --sort rate --save /etc/pacman.d/mirrorlist >/dev/null 2>&1
     sudo sed -i '/0x.sg/d' /etc/pacman.d/mirrorlist
 }
 
 function remove_orphans() {
-    sudo pacman -Rs $(sudo pacman -Qqtd) --noconfirm --quiet >/dev/null 2>&1
+
     sudo pacman -Qi linux-apfs >/dev/null 2>&1
-    [[ $? == 0 ]] && sudo pacman -Rdd --noconfirm linux-apfs >/dev/null 2>&1
+    [[ $? -eq 0 ]] && sudo pacman -Rdd --noconfirm linux-apfs >/dev/null 2>&1
     sudo pacman -Qi hfsprogs >/dev/null 2>&1
-    [[ $? == 0 ]] && sudo pacman -Rdd --noconfirm hfsprogs >/dev/null 2>&1
+    [[ $? -eq 0 ]] && sudo pacman -Rdd --noconfirm hfsprogs >/dev/null 2>&1
     sudo pacman -Qi raptor >/dev/null 2>&1
-    [[ $? == 0 ]] && sudo pacman -Rdd --noconfirm raptor >/dev/null 2>&1
+    [[ $? -eq 0 ]] && sudo pacman -Rdd --noconfirm raptor >/dev/null 2>&1
     sudo pacman -Qi fcitx >/dev/null 2>&1
-    [[ $? == 0 ]] && sudo pacman -Rcc --noconfirm fcitx-im >/dev/null 2>&1
+    [[ $? -eq 0 ]] && sudo pacman -Rcc --noconfirm fcitx-im >/dev/null 2>&1
+    sudo pacman -Qi libreoffice-still >/dev/null 2>&1
+    [[ $? -eq 0 ]] && sudo pacman -Rcc --noconfirm libreoffice-still >/dev/null 2>&1
+
+    sudo pacman -Rs $(sudo pacman -Qqtd) --noconfirm --quiet >/dev/null 2>&1
 
     # remove prvoise koompi theme
     sudo pacman -Qi breeze10-kde-git >/dev/null 2>&1
-    [[ $? == 0 ]] && sudo pacman -Rcc --noconfirm breeze10-kde-git >/dev/null 2>&1
+    [[ $? -eq 0 ]] && sudo pacman -Rcc --noconfirm breeze10-kde-git >/dev/null 2>&1
 
     sudo rm -rf /usr/bin/theme-manager \
         /usr/share/applications/theme-manager.desktop \
@@ -146,7 +159,7 @@ function remove_orphans() {
 
 function insert_koompi_repo() {
     grep "dev.koompi.org" /etc/pacman.conf >/dev/null 2>&1
-    [[ $? == 1 ]] && echo -e '\n[koompi]\nSigLevel = Never\nServer = https://dev.koompi.org/koompi\n' | sudo tee -a /etc/pacman.conf >/dev/null 2>&1
+    [[ $? -eq 1 ]] && echo -e '\n[koompi]\nSigLevel = Never\nServer = https://dev.koompi.org/koompi\n' | sudo tee -a /etc/pacman.conf >/dev/null 2>&1
 }
 
 function security_patch() {
@@ -177,12 +190,12 @@ function security_patch() {
     echo -e 'NAME="KOOMPI OS"\nPRETTY_NAME="KOOMPI OS"\nID=koompi\nBUILD_ID=rolling\nANSI_COLOR="38;2;23;147;209"\nHOME_URL="https://www.koompi.com/"\nDOCUMENTATION_URL="https://wiki.koompi.org/"\nSUPPORT_URL="https://t.me/koompi"\nBUG_REPORT_URL="https://t.me/koompi"\nLOGO=/usr/share/icons/koompi/koompi.svg' | sudo tee /etc/os-release >/dev/null 2>&1
     # nano config
     grep "include /usr/share/nano-syntax-highlighting/*.nanorc" /etc/nanorc >/dev/null 2>&1
-    [[ $? == 1 ]] && echo -e "include /usr/share/nano-syntax-highlighting/*.nanorc" | sudo tee -a /etc/nanorc >/dev/null 2>&1
+    [[ $? -eq 1 ]] && echo -e "include /usr/share/nano-syntax-highlighting/*.nanorc" | sudo tee -a /etc/nanorc >/dev/null 2>&1
     # hostname
     echo -e "koompi_os" | sudo tee /etc/hostname >/dev/null 2>&1
     # reflector
     sudo pacman -Qi reflector >/dev/null 2>&1
-    [[ $? == 1 ]] && yes | sudo pamcan -S reflector >/dev/null 2>&1
+    [[ $? -eq 1 ]] && yes | sudo pamcan -S reflector >/dev/null 2>&1
     sudo systemctl enable reflector.service >/dev/null 2>&1
     echo -e '--save /etc/pacman.d/mirrorlist \n--country "Hong Kong" \n--country Singapore \n--country Japan \n--country China \n--latest 20 \n--protocol https --sort rate' | sudo tee /etc/xdg/reflector/reflector.conf >/dev/null 2>&1
 
@@ -198,7 +211,7 @@ function security_patch() {
 
     # Add to pix group for pix
     groups | grep "pix" >/dev/null 2>&1
-    if [[ $? == 1 ]]; then
+    if [[ $? -eq 1 ]]; then
         sudo groupadd pix >/dev/null 2>&1
         sudo usermod -a -G pix $USER >/dev/null 2>&1
         sudo chgrp -R pix /var/lib/pix >/dev/null 2>&1
@@ -206,7 +219,7 @@ function security_patch() {
     fi
     # Add to input group for libinput gesture
     groups | grep "input" >/dev/null 2>&1
-    if [[ $? == 1 ]]; then
+    if [[ $? -eq 1 ]]; then
         sudo usermod -a -G input $USER >/dev/null 2>&1
     fi
 }
@@ -389,27 +402,61 @@ echo -e ""
 prevent_power_management
 echo -e "${RED}NOTE: During update, do not turn off your computer.${NC}"
 echo -e ""
-(refresh_mirror) &
-spinner "Ranking mirror repositories"
 
-(remove_orphans) &
-spinner "Cleaning up unneed packages"
+if [[ continue -eq 1 ]]; then
+    (remove_orphans) &
+    spinner "Cleaning up unneed packages"
+    completed=$((completed + 1))
+fi
 
-(insert_koompi_repo) &
-spinner "Updating the new repository of KOOMPI OS"
+if [[ continue -eq 1 ]]; then
+    (refresh_mirror) &
+    spinner "Ranking mirror repositories"
+    completed=$((completed + 1))
+fi
 
-(security_patch) &
-spinner "Updating the default security configurations"
+if [[ continue -eq 1 ]]; then
+    (insert_koompi_repo) &
+    spinner "Updating the new repository of KOOMPI OS"
+    completed=$((completed + 1))
+fi
 
-(install_upgrade) &
-spinner "Upgrading to KOOMPI OS 2.6.0"
+if [[ continue -eq 1 ]]; then
+    (security_patch) &
+    spinner "Updating the default security configurations"
+    completed=$((completed + 1))
+fi
 
-(apply_new_theme) &
-spinner "Applying generation upgrade"
-echo -e ""
-allow_power_management
-echo -e "${CYAN}====================================================================== ${NC}"
-echo -e ""
-echo -e "${GREEN}Upgraded to version 2.6.0${NC}"
-echo -e "${YELLOW}Please restart your computer before continue using.${NC}"
-echo -e ""
+if [[ continue -eq 1 ]]; then
+    (install_upgrade) &
+    spinner "Upgrading to KOOMPI OS 2.6.0"
+    completed=$((completed + 1))
+fi
+
+if [[ continue -eq 1 ]]; then
+    (apply_new_theme) &
+    spinner "Applying generation upgrade"
+    completed=$((completed + 1))
+fi
+if [[ continue -eq 1 && completed -eq 6 ]]; then
+    echo -e ""
+    allow_power_management
+    echo -e "${CYAN}====================================================================== ${NC}"
+    echo -e ""
+    echo -e "${GREEN}Upgraded to version 2.6.0${NC}"
+    echo -e "${YELLOW}Please restart your computer before continue using.${NC}"
+    echo -e ""
+else
+    echo -e ""
+    allow_power_management
+    echo -e "${RED}====================================================================== ${NC}"
+    echo -e ""
+    echo -e "${RED}Upgraded failed${NC}"
+    echo -e "There was ${retry} attemps to solve the issue but still unable to automatically fix."
+    echo -e "${RED}Please run:${NC}"
+    echo -e ""
+    echo -e "${RED}sudo pacman -Syyu${NC}"
+    echo -e ""
+    echo -e "${RED}Then restart your computer${NC}"
+    echo -e ""
+fi
