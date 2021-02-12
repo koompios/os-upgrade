@@ -405,42 +405,42 @@ prevent_power_management
 echo -e "${RED}NOTE: During update, do not turn off your computer.${NC}"
 echo -e ""
 
-if [[ continue -eq 1 ]]; then
+if [[ continues -eq 1 ]]; then
     (remove_orphans) &
     spinner "Cleaning up unneed packages"
     completed=$((completed + 1))
 fi
 
-if [[ continue -eq 1 ]]; then
+if [[ continues -eq 1 ]]; then
     (refresh_mirror) &
     spinner "Ranking mirror repositories"
     completed=$((completed + 1))
 fi
 
-if [[ continue -eq 1 ]]; then
+if [[ continues -eq 1 ]]; then
     (insert_koompi_repo) &
     spinner "Updating the new repository of KOOMPI OS"
     completed=$((completed + 1))
 fi
 
-if [[ continue -eq 1 ]]; then
+if [[ continues -eq 1 ]]; then
     (security_patch) &
     spinner "Updating the default security configurations"
     completed=$((completed + 1))
 fi
 
-if [[ continue -eq 1 ]]; then
+if [[ continues -eq 1 ]]; then
     (install_upgrade) &
     spinner "Upgrading to KOOMPI OS 2.6.0"
     completed=$((completed + 1))
 fi
 
-if [[ continue -eq 1 ]]; then
+if [[ continues -eq 1 ]]; then
     (apply_new_theme) &
     spinner "Applying generation upgrade"
     completed=$((completed + 1))
 fi
-if [[ continue -eq 1 && completed -eq 6 ]]; then
+if [[ continues -eq 1 && completed -eq 6 ]]; then
     echo -e ""
     allow_power_management
     echo -e "${CYAN}====================================================================== ${NC}"
