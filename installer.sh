@@ -74,7 +74,7 @@ function safe_install() {
         cp /tmp/installation.log "/tmp/installation${retry}.log"
         retry=$((retry + 1))
 
-        if [[ $retry -lt 20 ]]; then
+        if [[ $retry -gt 20 ]]; then
             safe_install $@
         else
             continues=0
