@@ -11,7 +11,7 @@ CYAN='\033[0;36m'
 YELLOW='\033[1;33m'
 
 retry=0
-continue=1
+continues=1
 completed=0
 
 function spinner() {
@@ -75,7 +75,7 @@ function safe_install() {
         if [[ $retry -lt 20 ]]; then
             safe_install $@
         else
-
+            continues=0
         fi
 
     fi
