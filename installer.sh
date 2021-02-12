@@ -70,8 +70,10 @@ function safe_install() {
                 yes | sudo pacman -Rdd --noconfirm ${satisfiers[$i]} >/dev/null 2>&1
             done
         fi
+
         cp /tmp/installation.log "/tmp/installation${retry}.log"
         retry=$((retry + 1))
+
         if [[ $retry -lt 20 ]]; then
             safe_install $@
         else
