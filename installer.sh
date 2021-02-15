@@ -39,8 +39,9 @@ function spinner() {
 function smart_update() {
     # prevent stale becuase of db lock
     [[ -f "/var/lib/pacman/db.lck" ]] && sudo rm -rf /var/lib/pacman/db.lck
-    [[ $smart_update_retries < 5 ]] && echo -e "\n${GREEN}Smart update pass: $smart_update_retries${NC}" || echo -e "\n${YELLOW}Smart update pass: $smart_update_retries${NC}"
-
+    if [[ $smart_update_retries > 0 ]]; then
+        [[ $smart_update_retries < 5 ]] && echo -e "\n${GREEN}Smart update pass: $smart_update_retries${NC}" || echo -e "\n${YELLOW}Smart update pass: $smart_update_retries${NC}"
+    fi
     sudo pacman -Syyu --noconfirm >/dev/null 2>&1 >/tmp/update.log
     if [[ $? -eq 1 ]]; then
         sudo find /var/cache/pacman/pkg/ -iname "*.part" -delete >/dev/null 2>&1
@@ -116,8 +117,9 @@ function smart_update() {
 function smart_install() {
     # prevent stale becuase of db lock
     [[ -f "/var/lib/pacman/db.lck" ]] && sudo rm -rf /var/lib/pacman/db.lck
-    [[ $smart_install_retries < 5 ]] && echo -e "\n${GREEN}Smart install pass: $smart_install_retries${NC}" || echo -e "\n${YELLOW}Smart install pass: $smart_install_retries${NC}"
-
+    if [[ $smart_install_retries > 0 ]]; then
+        [[ $smart_install_retries < 5 ]] && echo -e "\n${GREEN}Smart install pass: $smart_install_retries${NC}" || echo -e "\n${YELLOW}Smart install pass: $smart_install_retries${NC}"
+    fi
     sudo pacman -Syy --noconfirm $@ >/dev/null 2>&1 >/tmp/installation.log
     if [[ $? -eq 1 ]]; then
         sudo find /var/cache/pacman/pkg/ -iname "*.part" -delete >/dev/null 2>&1
@@ -470,7 +472,8 @@ function install_upgrade() {
         archlinux-keyring \
         zstd \
         bash-completion \
-        ntp
+        ntp \
+        grub-silent
 
 }
 
@@ -485,6 +488,32 @@ function apply_new_theme() {
     mkdir -p /etc/sddm.conf.d/
     echo -e "[Autologin]\nRelogin=false\nSession=\nUser=\n\n[General]\nHaltCommand=/usr/bin/systemctl poweroff\nRebootCommand=/usr/bin/systemctl reboot\n\n[Theme]\nCurrent=koompi-dark\n\n[Users]\nMaximumUid=60000\nMinimumUid=1000\n" | sudo tee /etc/sddm.conf.d/kde_settings.conf >/dev/null 2>&1
     sh /usr/share/org.koompi.theme.manager/kmp-dark.sh >/dev/null 2>&1
+}
+
+function update_grub() {
+    # grub
+    lsblk -no FSTYPE,PARTTYPE | grep swap >/dev/null 2>&1
+    if [[ $? == 0 ]]; then
+        swap_uuid=$(lsblk -no FSTYPE,PARTTYPE | grep swap | grep -oE '[^ ]+$')
+        grep 'resume=${swap_uuid}' /etc/default/grub >/dev/null 2>&1
+        if [[ $? == 1 ]]; then
+            sudo sed -i -e "s/GRUB_CMDLINE_LINUX_DEFAULT=\"[^\"]*/& resume=$swap_uuid/" /etc/default/grub
+        fi
+    fi
+
+    sudo sed -i -e 's/GRUB_DISTRIBUTOR=.*/GRUB_DISTRIBUTOR="KOOMPI-OS"/g' /etc/default/grub
+    # kernel
+    sudo sed -i -e "s/plymouth//g" /etc/mkinitcpio.conf
+    sudo sed -i -e "s/resume//g" /etc/mkinitcpio.conf
+    sudo sed -i -e "s/fsck//" /etc/mkinitcpio.conf
+    sudo sed -i -e "s/HOOKS=\"base udev/HOOKS=\"base systemd fsck/" /etc/mkinitcpio.conf
+    sudo sed -i -e "s/HOOKS=(base udev/HOOKS=(base systemd fsck/" /etc/mkinitcpio.conf
+    sudo mkinitcpio -p linux
+    echo -e "\nStandardOutput=null\nStandardError=journal+console\n" | sudo EDITOR='tee -a' systemctl edit --full systemd-fsck-root.service >/dev/null 2>&1
+    echo -e "\nStandardOutput=null\nStandardError=journal+console\n" | sudo EDITOR='tee -a' systemctl edit --full systemd-fsck@.service >/dev/null 2>&1
+
+    sudo grub-install --target=x86_64-efi --bootloader-id=KOOMPI-OS --recheck >/dev/null 2>&1
+    sudo grub-mkconfig -o /boot/grub/grub.cfg >/dev/null 2>&1
 }
 
 function prevent_power_management() {
@@ -512,48 +541,54 @@ prevent_power_management
 echo -e "${RED}NOTE: During update, do not turn off your computer.${NC}"
 echo -e ""
 
-if [[ continues -eq 1 ]]; then
+if [[ $continues -eq 1 ]]; then
     (insert_koompi_repo) &
     spinner "Updating the new repository of KOOMPI OS"
     completed=$((completed + 1))
 fi
 
-if [[ continues -eq 1 ]]; then
+if [[ $continues -eq 1 ]]; then
     (remove_orphans) &
     spinner "Cleaning up unneed packages"
     completed=$((completed + 1))
 fi
 
-if [[ continues -eq 1 ]]; then
+if [[ $continues -eq 1 ]]; then
     (refresh_mirror) &
     spinner "Ranking mirror repositories"
     completed=$((completed + 1))
 fi
 
-if [[ continues -eq 1 ]]; then
+if [[ $continues -eq 1 ]]; then
     (security_patch) &
     spinner "Updating the default security configurations"
     completed=$((completed + 1))
 fi
 
-if [[ continues -eq 1 ]]; then
+if [[ $continues -eq 1 ]]; then
     (smart_update) &
     spinner "Updating all installed applications"
     completed=$((completed + 1))
 fi
 
-if [[ continues -eq 1 ]]; then
+if [[ $continues -eq 1 ]]; then
     (install_upgrade) &
     spinner "Upgrading to KOOMPI OS 2.6.0"
     completed=$((completed + 1))
 fi
 
-if [[ continues -eq 1 ]]; then
+if [[ $continues -eq 1 ]]; then
+    (update_grub) &
+    spinner "Updating bootloader"
+    completed=$((completed + 1))
+fi
+
+if [[ $continues -eq 1 ]]; then
     (apply_new_theme) &
     spinner "Applying generation upgrade"
     completed=$((completed + 1))
 fi
-if [[ continues -eq 1 ]]; then
+if [[ $continues -eq 1 ]]; then
     echo -e ""
     allow_power_management
     echo -e "${CYAN}====================================================================== ${NC}"
@@ -567,8 +602,8 @@ else
     echo -e "${RED}====================================================================== ${NC}"
     echo -e ""
     echo -e "${RED}Upgraded failed${NC}"
-    echo -e "${YELLOW}On ${completed} steps was completed"
-    echo -e "There was ${retry} attemps to solve the issue but still unable to automatically fix."
+    echo -e "${YELLOW}${completed} steps was completed"
+    echo -e "There was many attemps to solve the issue but still unable to automatically fix."
     echo -e "${RED}Please run:${NC}"
     echo -e ""
     echo -e "${RED}sudo pacman -Syyu${NC}"
