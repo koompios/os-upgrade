@@ -231,7 +231,7 @@ function remove_orphans() {
         /usr/share/wallpapers/mosx-light.jpg \
         /usr/share/wallpapers/winx-dark.jpg \
         /usr/share/wallpapers/winx-light.jpg >/dev/null 2>&1
-
+    [[ -f /etc/sddm.conf ]] && sudo rm -rf /etc/sddm.conf
     rm -rf ${HOME}/.config/Kvantum/Fluent-Dark \
         ${HOME}/.config/Kvantum/Fluent-Light \
         ${HOME}/.config/Kvantum/kvantum.kvconfig \
@@ -476,12 +476,12 @@ function install_upgrade() {
 
 function apply_new_theme() {
 
-    cp -rf .bash_aliases ${HOME} >/dev/null 2>&1
-    cp -rf .bash_history ${HOME} >/dev/null 2>&1
-    cp -rf .bash_profile ${HOME} >/dev/null 2>&1
-    cp -rf .bashrc ${HOME} >/dev/null 2>&1
-    cp -rf .bash_script ${HOME} >/dev/null 2>&1
-    cp -rf .config ${HOME} >/dev/null 2>&1
+    cp -rf /etc/skel/.bash_aliases ${HOME} >/dev/null 2>&1
+    cp -rf /etc/skel/.bash_history ${HOME} >/dev/null 2>&1
+    cp -rf /etc/skel/.bash_profile ${HOME} >/dev/null 2>&1
+    cp -rf /etc/skel/.bashrc ${HOME} >/dev/null 2>&1
+    cp -rf /etc/skel/.bash_script ${HOME} >/dev/null 2>&1
+    cp -rf /etc/skel/.config ${HOME} >/dev/null 2>&1
     mkdir -p /etc/sddm.conf.d/
     echo -e "[Autologin]\nRelogin=false\nSession=\nUser=\n\n[General]\nHaltCommand=/usr/bin/systemctl poweroff\nRebootCommand=/usr/bin/systemctl reboot\n\n[Theme]\nCurrent=koompi-dark\n\n[Users]\nMaximumUid=60000\nMinimumUid=1000\n" | sudo tee /etc/sddm.conf.d/kde_settings.conf >/dev/null 2>&1
     sh /usr/share/org.koompi.theme.manager/kmp-dark.sh >/dev/null 2>&1
