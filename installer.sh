@@ -32,23 +32,23 @@ function spinner() {
         printf $reset
     done
 
-    printf "[${GREEN}\xE2\x9C\x94${NC}]"
+    printf "[${GREEN}\xE2\x9C\x94${NC}] "
     echo -e ""
 }
 
 function smart_update() {
     # prevent stale becuase of db lock
     [[ -f "/var/lib/pacman/db.lck" ]] && sudo rm -rf /var/lib/pacman/db.lck
-    [[ $smart_update_retries < 5 ]] && echo -e "${GREEN}Smart update pass: $smart_update_retries${NC}" || echo -e "${YELLOW}Smart install pass: $smart_update_retries${NC}"
+    [[ $smart_update_retries < 5 ]] && echo -e "\n${GREEN}Smart update pass: $smart_update_retries${NC}" || echo -e "\n${YELLOW}Smart install pass: $smart_update_retries${NC}"
 
     sudo pacman -Syyu --noconfirm >/dev/null 2>&1 >/tmp/update.log
     if [[ $? -eq 1 ]]; then
         sudo find /var/cache/pacman/pkg/ -iname "*.part" -delete >/dev/null 2>&1
 
-        conflict_files=($(cat /tmp/update.log | grep "exists in filesystem" | grep -o '/[^ ]*'))
+        local conflict_files=($(cat /tmp/update.log | grep "exists in filesystem" | grep -o '/[^ ]*'))
 
         if [[ ${#conflict_files[@]} > 0 ]]; then
-            echo -e "Conflict files detected. Resolving conflict files"
+            echo -e "\nConflict files detected. Resolving conflict files"
             for ((i = 0; i < ${#conflict_files[@]}; i++)); do
                 sudo rm -rf ${conflict_files[$i]}
                 if [[ $? -eq 0 ]]; then
@@ -59,10 +59,10 @@ function smart_update() {
             done
         fi
 
-        conflict_packages=($(cat /tmp/update.log | grep "are in conflict. Remove" | grep -o 'Remove [^ ]*' | grep -oE '[^ ]+$' | sed -e "s/[?]//"))
+        local conflict_packages=($(cat /tmp/update.log | grep "are in conflict. Remove" | grep -o 'Remove [^ ]*' | grep -oE '[^ ]+$' | sed -e "s/[?]//"))
 
         if [[ ${#conflict_packages[@]} > 0 ]]; then
-            echo -e "Conflict packages detected. Resovling conflict packages."
+            echo -e "\nConflict packages detected. Resovling conflict packages."
             for ((i = 0; i < ${#conflict_packages[@]}; i++)); do
                 sudo pacman -Rcc --noconfirm ${conflict_packages[$i]} >/dev/null 2>&1
                 if [[ $? -eq 0 ]]; then
@@ -73,10 +73,10 @@ function smart_update() {
             done
         fi
 
-        breakers=($(cat /tmp/update.log | grep " breaks dependency " | grep -o 'required by [^ ]*' | grep -oE '[^ ]+$'))
+        local breakers=($(cat /tmp/update.log | grep " breaks dependency " | grep -o 'required by [^ ]*' | grep -oE '[^ ]+$'))
 
         if [[ ${#breakers[@]} > 0 ]]; then
-            echo -e "Conflict dependencies detected. Resovling conflicting dependencies."
+            echo -e "\nConflict dependencies detected. Resovling conflicting dependencies."
             for ((i = 0; i < ${#breakers[@]}; i++)); do
                 sudo pacman -Rdd --noconfirm ${breakers[$i]} >/dev/null 2>&1
                 if [[ $? -eq 0 ]]; then
@@ -87,10 +87,10 @@ function smart_update() {
             done
         fi
 
-        satisfiers=($(cat /tmp/update.log | grep "unable to satisfy dependency" | grep -oE '[^ ]+$'))
+        local satisfiers=($(cat /tmp/update.log | grep "unable to satisfy dependency" | grep -oE '[^ ]+$'))
 
         if [[ ${#satisfiers[@]} -gt 0 ]]; then
-            echo -e "Unsatisfied depencies detected. Resovling issues."
+            echo -e "\nUnsatisfied depencies detected. Resovling issues."
             for ((i = 0; i < ${#satisfiers[@]}; i++)); do
                 sudo pacman -Rdd --noconfirm ${satisfiers[$i]} >/dev/null 2>&1
                 if [[ $? -eq 0 ]]; then
@@ -104,7 +104,7 @@ function smart_update() {
         cp /tmp/update.log "/tmp/update${smart_update_retries}.log"
         smart_update_retries=$((smart_update_retries + 1))
 
-        if [[ $smart_update_retries -gt 30 ]]; then
+        if [[ $smart_update_retries -lt 30 ]]; then
             smart_update
         else
             continues=0
@@ -116,16 +116,16 @@ function smart_update() {
 function smart_install() {
     # prevent stale becuase of db lock
     [[ -f "/var/lib/pacman/db.lck" ]] && sudo rm -rf /var/lib/pacman/db.lck
-    [[ $smart_install_retries < 5 ]] && echo -e "${GREEN}Smart install pass: $smart_install_retries${NC}" || echo -e "${YELLOW}Smart install pass: $smart_install_retries${NC}"
+    [[ $smart_install_retries < 5 ]] && echo -e "\n${GREEN}Smart install pass: $smart_install_retries${NC}" || echo -e "\n${YELLOW}Smart install pass: $smart_install_retries${NC}"
 
     sudo pacman -S --noconfirm $@ >/dev/null 2>&1 >/tmp/installation.log
     if [[ $? -eq 1 ]]; then
         sudo find /var/cache/pacman/pkg/ -iname "*.part" -delete >/dev/null 2>&1
 
-        conflict_files=($(cat /tmp/installation.log | grep "exists in filesystem" | grep -o '/[^ ]*'))
+        local conflict_files=($(cat /tmp/installation.log | grep "exists in filesystem" | grep -o '/[^ ]*'))
 
         if [[ ${#conflict_files[@]} > 0 ]]; then
-            echo -e "Conflict files detected. Resolving conflict files"
+            echo -e "\nConflict files detected. Resolving conflict files"
             for ((i = 0; i < ${#conflict_files[@]}; i++)); do
                 sudo rm -rf ${conflict_files[$i]}
                 if [[ $? -eq 0 ]]; then
@@ -136,10 +136,10 @@ function smart_install() {
             done
         fi
 
-        conflict_packages=($(cat /tmp/installation.log | grep "are in conflict. Remove" | grep -o 'Remove [^ ]*' | grep -oE '[^ ]+$' | sed -e "s/[?]//"))
+        local conflict_packages=($(cat /tmp/installation.log | grep "are in conflict. Remove" | grep -o 'Remove [^ ]*' | grep -oE '[^ ]+$' | sed -e "s/[?]//"))
 
         if [[ ${#conflict_packages[@]} > 0 ]]; then
-            echo -e "Conflict packages detected. Resovling conflict packages."
+            echo -e "\nConflict packages detected. Resovling conflict packages."
             for ((i = 0; i < ${#conflict_packages[@]}; i++)); do
                 sudo pacman -Rcc --noconfirm ${conflict_packages[$i]} >/dev/null 2>&1
                 if [[ $? -eq 0 ]]; then
@@ -150,10 +150,10 @@ function smart_install() {
             done
         fi
 
-        breakers=($(cat /tmp/installation.log | grep " breaks dependency " | grep -o 'required by [^ ]*' | grep -oE '[^ ]+$'))
+        local breakers=($(cat /tmp/installation.log | grep " breaks dependency " | grep -o 'required by [^ ]*' | grep -oE '[^ ]+$'))
 
         if [[ ${#breakers[@]} > 0 ]]; then
-            echo -e "Conflict dependencies detected. Resovling conflicting dependencies."
+            echo -e "\nConflict dependencies detected. Resovling conflicting dependencies."
             for ((i = 0; i < ${#breakers[@]}; i++)); do
                 sudo pacman -Rdd --noconfirm ${breakers[$i]} >/dev/null 2>&1
                 if [[ $? -eq 0 ]]; then
@@ -164,10 +164,10 @@ function smart_install() {
             done
         fi
 
-        satisfiers=($(cat /tmp/installation.log | grep "unable to satisfy dependency" | grep -oE '[^ ]+$'))
+        local satisfiers=($(cat /tmp/installation.log | grep "unable to satisfy dependency" | grep -oE '[^ ]+$'))
 
         if [[ ${#satisfiers[@]} -gt 0 ]]; then
-            echo -e "Unsatisfied depencies detected. Resovling issues."
+            echo -e "\nUnsatisfied depencies detected. Resovling issues."
             for ((i = 0; i < ${#satisfiers[@]}; i++)); do
                 sudo pacman -Rdd --noconfirm ${satisfiers[$i]} >/dev/null 2>&1
                 if [[ $? -eq 0 ]]; then
@@ -181,7 +181,7 @@ function smart_install() {
         cp /tmp/installation.log "/tmp/installation${smart_install_retries}.log"
         smart_install_retries=$((smart_install_retries + 1))
 
-        if [[ $smart_install_retries -gt 30 ]]; then
+        if [[ $smart_install_retries -lt 30 ]]; then
             smart_install $@
         else
             continues=0
@@ -473,12 +473,12 @@ function install_upgrade() {
 
 function apply_new_theme() {
 
-    cp -r .bash_aliases ${HOME}
-    cp -r .bash_history ${HOME}
-    cp -r .bash_profile ${HOME}
-    cp -r .bashrc ${HOME}
-    cp -r .bash_script ${HOME}
-    cp -r .config ${HOME}
+    cp -rf .bash_aliases ${HOME} >/dev/null 2>&1
+    cp -rf .bash_history ${HOME} >/dev/null 2>&1
+    cp -rf .bash_profile ${HOME} >/dev/null 2>&1
+    cp -rf .bashrc ${HOME} >/dev/null 2>&1
+    cp -rf .bash_script ${HOME} >/dev/null 2>&1
+    cp -rf .config ${HOME} >/dev/null 2>&1
     mkdir -p /etc/sddm.conf.d/
     echo -e "[Autologin]\nRelogin=false\nSession=\nUser=\n\n[General]\nHaltCommand=/usr/bin/systemctl poweroff\nRebootCommand=/usr/bin/systemctl reboot\n\n[Theme]\nCurrent=koompi-dark\n\n[Users]\nMaximumUid=60000\nMinimumUid=1000\n" | sudo tee /etc/sddm.conf.d/kde_settings.conf >/dev/null 2>&1
     sh /usr/share/org.koompi.theme.manager/kmp-dark.sh >/dev/null 2>&1
@@ -550,7 +550,7 @@ if [[ continues -eq 1 ]]; then
     spinner "Applying generation upgrade"
     completed=$((completed + 1))
 fi
-if [[ continues -eq 1 && completed -eq 6 ]]; then
+if [[ continues -eq 1 ]]; then
     echo -e ""
     allow_power_management
     echo -e "${CYAN}====================================================================== ${NC}"
@@ -564,6 +564,7 @@ else
     echo -e "${RED}====================================================================== ${NC}"
     echo -e ""
     echo -e "${RED}Upgraded failed${NC}"
+    echo -e "${YELLOW}On ${completed} steps was completed"
     echo -e "There was ${retry} attemps to solve the issue but still unable to automatically fix."
     echo -e "${RED}Please run:${NC}"
     echo -e ""
