@@ -286,6 +286,9 @@ function security_patch() {
     sudo sed -i 's/#DefaultTimeoutStopSec=90s/DefaultTimeoutStopSec=10s/g' /etc/systemd/system.conf >/dev/null 2>&1
     # network manager autoconnect
     echo -e '[connection]\nconnection.autoconnect-slaves=1' | sudo tee /etc/NetworkManager/NetworkManager.conf >/dev/null 2>&1
+    echo -e "[Match]/nName=en*/nName=eth*/n/n[Network]/nDHCP=yes/nIPv6PrivacyExtensions=yes/n/n[DHCP]/nRouteMetric=512/n" | sudo tee /etc/systemd/network/20-ethernet.network
+    echo -e "[Match]\nName=wlp*\nName=wlan*\n\n[Network]\nDHCP=yes\nIPv6PrivacyExtensions=yes\n\n[DHCP]\nRouteMetric=1024\n" | sudo tee /etc/systemd/network/20-wireless.network
+
     # disable gnome keyring to speedup sddm
     sudo sed -i -e '/^[^#]/ s/\(^.*pam_gnome_keyring.*$\)/#\1/' /etc/pam.d/sddm
     sudo sed -i -e '/^[^#]/ s/\(^.*pam_gnome_keyring.*$\)/#\1/' /etc/pam.d/sddm-autologin
