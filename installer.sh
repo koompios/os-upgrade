@@ -32,14 +32,14 @@ function spinner() {
         printf $reset
     done
 
-    printf "[${GREEN}\xE2\x9C\x94${NC}] "
+    printf "[${GREEN}\xE2\x9C\x94${NC}]"
     echo -e ""
 }
 
 function smart_update() {
     # prevent stale becuase of db lock
     [[ -f "/var/lib/pacman/db.lck" ]] && sudo rm -rf /var/lib/pacman/db.lck
-    [[ $smart_update_retries < 5 ]] && echo -e "\n${GREEN}Smart update pass: $smart_update_retries${NC}" || echo -e "\n${YELLOW}Smart install pass: $smart_update_retries${NC}"
+    [[ $smart_update_retries < 5 ]] && echo -e "\n${GREEN}Smart update pass: $smart_update_retries${NC}" || echo -e "\n${YELLOW}Smart update pass: $smart_update_retries${NC}"
 
     sudo pacman -Syyu --noconfirm >/dev/null 2>&1 >/tmp/update.log
     if [[ $? -eq 1 ]]; then
@@ -48,13 +48,13 @@ function smart_update() {
         local conflict_files=($(cat /tmp/update.log | grep "exists in filesystem" | grep -o '/[^ ]*'))
 
         if [[ ${#conflict_files[@]} > 0 ]]; then
-            echo -e "\nConflict files detected. Resolving conflict files"
+            echo -e "\n${YELLOW}Conflict files detected. Resolving conflict files${NC}"
             for ((i = 0; i < ${#conflict_files[@]}; i++)); do
                 sudo rm -rf ${conflict_files[$i]}
                 if [[ $? -eq 0 ]]; then
-                    echo -e "${GREEN}Removed: ${conflict_files[$i]} ${NC}"
+                    echo -e "\n${GREEN}Removed: ${conflict_files[$i]} ${NC}"
                 else
-                    echo -e "${RED}Failed to remove: ${conflict_files[$i]} ${NC}"
+                    echo -e "\n${RED}Failed to remove: ${conflict_files[$i]} ${NC}"
                 fi
             done
         fi
@@ -62,13 +62,13 @@ function smart_update() {
         local conflict_packages=($(cat /tmp/update.log | grep "are in conflict. Remove" | grep -o 'Remove [^ ]*' | grep -oE '[^ ]+$' | sed -e "s/[?]//"))
 
         if [[ ${#conflict_packages[@]} > 0 ]]; then
-            echo -e "\nConflict packages detected. Resovling conflict packages."
+            echo -e "\n${YELLOW}Conflict packages detected. Resovling conflict packages.${NC}"
             for ((i = 0; i < ${#conflict_packages[@]}; i++)); do
                 sudo pacman -Rcc --noconfirm ${conflict_packages[$i]} >/dev/null 2>&1
                 if [[ $? -eq 0 ]]; then
-                    echo -e "${GREEN}Uninstalled: ${conflict_packages[$i]} ${NC}"
+                    echo -e "\n${GREEN}Uninstalled: ${conflict_packages[$i]} ${NC}"
                 else
-                    echo -e "${RED}Failed to uninstall: ${conflict_packages[$i]} ${NC}"
+                    echo -e "\n${RED}Failed to uninstall: ${conflict_packages[$i]} ${NC}"
                 fi
             done
         fi
@@ -76,13 +76,13 @@ function smart_update() {
         local breakers=($(cat /tmp/update.log | grep " breaks dependency " | grep -o 'required by [^ ]*' | grep -oE '[^ ]+$'))
 
         if [[ ${#breakers[@]} > 0 ]]; then
-            echo -e "\nConflict dependencies detected. Resovling conflicting dependencies."
+            echo -e "\n${YELLOW}Conflict dependencies detected. Resovling conflicting dependencies.${NC}"
             for ((i = 0; i < ${#breakers[@]}; i++)); do
                 sudo pacman -Rdd --noconfirm ${breakers[$i]} >/dev/null 2>&1
                 if [[ $? -eq 0 ]]; then
-                    echo -e "${GREEN}Uninstalled: ${breakers[$i]} ${NC}"
+                    echo -e "\n${GREEN}Uninstalled: ${breakers[$i]} ${NC}"
                 else
-                    echo -e "${RED}Failed to uninstall: ${breakers[$i]} ${NC}"
+                    echo -e "\n${RED}Failed to uninstall: ${breakers[$i]} ${NC}"
                 fi
             done
         fi
@@ -90,13 +90,13 @@ function smart_update() {
         local satisfiers=($(cat /tmp/update.log | grep "unable to satisfy dependency" | grep -oE '[^ ]+$'))
 
         if [[ ${#satisfiers[@]} -gt 0 ]]; then
-            echo -e "\nUnsatisfied depencies detected. Resovling issues."
+            echo -e "\n${YELLOW}Unsatisfied depencies detected. Resovling issues.${NC}"
             for ((i = 0; i < ${#satisfiers[@]}; i++)); do
                 sudo pacman -Rdd --noconfirm ${satisfiers[$i]} >/dev/null 2>&1
                 if [[ $? -eq 0 ]]; then
-                    echo -e "${GREEN}Uninstalled: ${satisfiers[$i]} ${NC}"
+                    echo -e "\n${GREEN}Uninstalled: ${satisfiers[$i]} ${NC}"
                 else
-                    echo -e "${RED}Failed to uninstall: ${satisfiers[$i]} ${NC}"
+                    echo -e "\n${RED}Failed to uninstall: ${satisfiers[$i]} ${NC}"
                 fi
             done
         fi
@@ -118,20 +118,20 @@ function smart_install() {
     [[ -f "/var/lib/pacman/db.lck" ]] && sudo rm -rf /var/lib/pacman/db.lck
     [[ $smart_install_retries < 5 ]] && echo -e "\n${GREEN}Smart install pass: $smart_install_retries${NC}" || echo -e "\n${YELLOW}Smart install pass: $smart_install_retries${NC}"
 
-    sudo pacman -S --noconfirm $@ >/dev/null 2>&1 >/tmp/installation.log
+    sudo pacman -Syy --noconfirm $@ >/dev/null 2>&1 >/tmp/installation.log
     if [[ $? -eq 1 ]]; then
         sudo find /var/cache/pacman/pkg/ -iname "*.part" -delete >/dev/null 2>&1
 
         local conflict_files=($(cat /tmp/installation.log | grep "exists in filesystem" | grep -o '/[^ ]*'))
 
         if [[ ${#conflict_files[@]} > 0 ]]; then
-            echo -e "\nConflict files detected. Resolving conflict files"
+            echo -e "\n${YELLOW}Conflict files detected. Resolving conflict files${NC}"
             for ((i = 0; i < ${#conflict_files[@]}; i++)); do
                 sudo rm -rf ${conflict_files[$i]}
                 if [[ $? -eq 0 ]]; then
-                    echo -e "${GREEN}Removed: ${conflict_files[$i]} ${NC}"
+                    echo -e "\n${GREEN}Removed: ${conflict_files[$i]} ${NC}"
                 else
-                    echo -e "${RED}Failed to remove: ${conflict_files[$i]} ${NC}"
+                    echo -e "\n${RED}Failed to remove: ${conflict_files[$i]} ${NC}"
                 fi
             done
         fi
@@ -139,13 +139,13 @@ function smart_install() {
         local conflict_packages=($(cat /tmp/installation.log | grep "are in conflict. Remove" | grep -o 'Remove [^ ]*' | grep -oE '[^ ]+$' | sed -e "s/[?]//"))
 
         if [[ ${#conflict_packages[@]} > 0 ]]; then
-            echo -e "\nConflict packages detected. Resovling conflict packages."
+            echo -e "\n${YELLOW}Conflict packages detected. Resovling conflict packages.${NC}"
             for ((i = 0; i < ${#conflict_packages[@]}; i++)); do
                 sudo pacman -Rcc --noconfirm ${conflict_packages[$i]} >/dev/null 2>&1
                 if [[ $? -eq 0 ]]; then
-                    echo -e "${GREEN}Uninstalled: ${conflict_packages[$i]} ${NC}"
+                    echo -e "\n${GREEN}Uninstalled: ${conflict_packages[$i]} ${NC}"
                 else
-                    echo -e "${RED}Failed to uninstall: ${conflict_packages[$i]} ${NC}"
+                    echo -e "\n${RED}Failed to uninstall: ${conflict_packages[$i]} ${NC}"
                 fi
             done
         fi
@@ -153,13 +153,13 @@ function smart_install() {
         local breakers=($(cat /tmp/installation.log | grep " breaks dependency " | grep -o 'required by [^ ]*' | grep -oE '[^ ]+$'))
 
         if [[ ${#breakers[@]} > 0 ]]; then
-            echo -e "\nConflict dependencies detected. Resovling conflicting dependencies."
+            echo -e "\n${YELLOW}Conflict dependencies detected. Resovling conflicting dependencies.${NC}"
             for ((i = 0; i < ${#breakers[@]}; i++)); do
                 sudo pacman -Rdd --noconfirm ${breakers[$i]} >/dev/null 2>&1
                 if [[ $? -eq 0 ]]; then
-                    echo -e "${GREEN}Uninstalled: ${breakers[$i]} ${NC}"
+                    echo -e "\n${GREEN}Uninstalled: ${breakers[$i]} ${NC}"
                 else
-                    echo -e "${RED}Failed to uninstall: ${breakers[$i]} ${NC}"
+                    echo -e "\n${RED}Failed to uninstall: ${breakers[$i]} ${NC}"
                 fi
             done
         fi
@@ -167,13 +167,13 @@ function smart_install() {
         local satisfiers=($(cat /tmp/installation.log | grep "unable to satisfy dependency" | grep -oE '[^ ]+$'))
 
         if [[ ${#satisfiers[@]} -gt 0 ]]; then
-            echo -e "\nUnsatisfied depencies detected. Resovling issues."
+            echo -e "\n${YELLOW}Unsatisfied depencies detected. Resovling issues.${NC}"
             for ((i = 0; i < ${#satisfiers[@]}; i++)); do
                 sudo pacman -Rdd --noconfirm ${satisfiers[$i]} >/dev/null 2>&1
                 if [[ $? -eq 0 ]]; then
-                    echo -e "${GREEN}Uninstalled: ${satisfiers[$i]} ${NC}"
+                    echo -e "\n${GREEN}Uninstalled: ${satisfiers[$i]} ${NC}"
                 else
-                    echo -e "${RED}Failed to uninstall: ${satisfiers[$i]} ${NC}"
+                    echo -e "\n${RED}Failed to uninstall: ${satisfiers[$i]} ${NC}"
                 fi
             done
         fi
@@ -286,7 +286,7 @@ function security_patch() {
     sudo sed -i 's/#DefaultTimeoutStopSec=90s/DefaultTimeoutStopSec=10s/g' /etc/systemd/system.conf >/dev/null 2>&1
     # network manager autoconnect
     echo -e '[connection]\nconnection.autoconnect-slaves=1' | sudo tee /etc/NetworkManager/NetworkManager.conf >/dev/null 2>&1
-    echo -e "[Match]/nName=en*/nName=eth*/n/n[Network]/nDHCP=yes/nIPv6PrivacyExtensions=yes/n/n[DHCP]/nRouteMetric=512/n" | sudo tee /etc/systemd/network/20-ethernet.network
+    echo -e "[Match]\nName=en*\nName=eth*\n[Network]\nDHCP=yes\nIPv6PrivacyExtensions=yes\n[DHCP]\nRouteMetric=512\n" | sudo tee /etc/systemd/network/20-ethernet.network
     echo -e "[Match]\nName=wlp*\nName=wlan*\n\n[Network]\nDHCP=yes\nIPv6PrivacyExtensions=yes\n\n[DHCP]\nRouteMetric=1024\n" | sudo tee /etc/systemd/network/20-wireless.network
 
     # disable gnome keyring to speedup sddm
