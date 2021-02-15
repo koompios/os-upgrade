@@ -472,8 +472,7 @@ function install_upgrade() {
         archlinux-keyring \
         zstd \
         bash-completion \
-        ntp \
-        grub-silent
+        ntp
 
 }
 
@@ -491,28 +490,21 @@ function apply_new_theme() {
 }
 
 function update_grub() {
-    # grub
-    lsblk -no FSTYPE,PARTTYPE | grep swap >/dev/null 2>&1
-    if [[ $? == 0 ]]; then
-        swap_uuid=$(lsblk -no FSTYPE,PARTTYPE | grep swap | grep -oE '[^ ]+$')
-        grep 'resume=${swap_uuid}' /etc/default/grub >/dev/null 2>&1
-        if [[ $? == 1 ]]; then
-            sudo sed -i -e "s/GRUB_CMDLINE_LINUX_DEFAULT=\"[^\"]*/& resume=$swap_uuid/" /etc/default/grub
-        fi
+    [[ -f /etc/default/grub ]] && sudo rm -rf /etc/default/grub
+    smart_install grub-silent
+
+    sudo sed -i -e 's/GRUB_DISTRIBUTOR=.*/GRUB_DISTRIBUTOR="KOOMPI_OS"/g' /etc/default/grub
+    # kernel
+
+    sudo sed -i -e "s/HOOKS=\"base udev.*/HOOKS=\"base systemd fsck autodetect modconf block keyboard keymap filesystems\"/g" /etc/mkinitcpio.conf
+    sudo sed -i -e "s/HOOKS=(base udev.*/HOOKS=\"base systemd fsck autodetect modconf block keyboard keymap filesystems\"/g" /etc/mkinitcpio.conf
+    sudo mkinitcpio -p linux >/dev/null 2>&1
+    grep "StandardOutput=null" /etc/systemd/system/systemd-fsck-root.service >/dev/null 2>&1
+    if [[ $? == 1 ]]; then
+        echo -e "\nStandardOutput=null\nStandardError=journal+console\n" | sudo EDITOR='tee -a' systemctl edit --full systemd-fsck-root.service >/dev/null 2>&1
+        echo -e "\nStandardOutput=null\nStandardError=journal+console\n" | sudo EDITOR='tee -a' systemctl edit --full systemd-fsck@.service >/dev/null 2>&1
     fi
 
-    sudo sed -i -e 's/GRUB_DISTRIBUTOR=.*/GRUB_DISTRIBUTOR="KOOMPI-OS"/g' /etc/default/grub
-    # kernel
-    sudo sed -i -e "s/plymouth//g" /etc/mkinitcpio.conf
-    sudo sed -i -e "s/resume//g" /etc/mkinitcpio.conf
-    sudo sed -i -e "s/fsck//" /etc/mkinitcpio.conf
-    sudo sed -i -e "s/HOOKS=\"base udev/HOOKS=\"base systemd fsck/" /etc/mkinitcpio.conf
-    sudo sed -i -e "s/HOOKS=(base udev/HOOKS=(base systemd fsck/" /etc/mkinitcpio.conf
-    sudo mkinitcpio -p linux
-    echo -e "\nStandardOutput=null\nStandardError=journal+console\n" | sudo EDITOR='tee -a' systemctl edit --full systemd-fsck-root.service >/dev/null 2>&1
-    echo -e "\nStandardOutput=null\nStandardError=journal+console\n" | sudo EDITOR='tee -a' systemctl edit --full systemd-fsck@.service >/dev/null 2>&1
-
-    sudo grub-install --target=x86_64-efi --bootloader-id=KOOMPI-OS --recheck >/dev/null 2>&1
     sudo grub-mkconfig -o /boot/grub/grub.cfg >/dev/null 2>&1
 }
 
