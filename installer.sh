@@ -311,7 +311,11 @@ function security_patch() {
     # hostname
     echo "koompi_os" | sudo tee /etc/hostname >/dev/null 2>&1
     # reflector
+    sudo systemctl disable pacman-init.service NetworkManager-wait-online.service >/dev/null 2>&1
     sudo systemctl enable reflector.service >/dev/null 2>&1
+    sudo systemctl enable haveged.service >/dev/null 2>&1
+    sudo systemctl enable upower.service >/dev/null 2>&1
+
     echo -e '--save /etc/pacman.d/mirrorlist \n--country "Hong Kong" \n--country Singapore \n--country Japan \n--country China \n--latest 20 \n--protocol https --sort rate' | sudo tee /etc/xdg/reflector/reflector.conf >/dev/null 2>&1
 
     PRODUCT=$(cat /sys/class/dmi/id/product_name)
