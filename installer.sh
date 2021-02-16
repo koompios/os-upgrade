@@ -205,8 +205,8 @@ function refresh_mirror() {
 
 function remove_orphans() {
 
-    sudo pacman -Qi linux-apfs >/dev/null 2>&1
-    [[ $? -eq 0 ]] && sudo pacman -Rdd --noconfirm linux-apfs >/dev/null 2>&1
+    sudo pacman -Qi linux-apfs-dkms-git >/dev/null 2>&1
+    [[ $? -eq 0 ]] && sudo pacman -Rdd --noconfirm linux-apfs-dkms-git >/dev/null 2>&1
     sudo pacman -Qi hfsprogs >/dev/null 2>&1
     [[ $? -eq 0 ]] && sudo pacman -Rdd --noconfirm hfsprogs >/dev/null 2>&1
     sudo pacman -Qi raptor >/dev/null 2>&1
@@ -291,6 +291,11 @@ function security_patch() {
     echo -e "[Match]\nName=en*\nName=eth*\n[Network]\nDHCP=yes\nIPv6PrivacyExtensions=yes\n[DHCP]\nRouteMetric=512\n" | sudo tee /etc/systemd/network/20-ethernet.network >/dev/null 2>&1
     echo -e "[Match]\nName=wlp*\nName=wlan*\n\n[Network]\nDHCP=yes\nIPv6PrivacyExtensions=yes\n\n[DHCP]\nRouteMetric=1024\n" | sudo tee /etc/systemd/network/20-wireless.network >/dev/null 2>&1
 
+    # tweak login speed
+    sudo sed -i 's/sha512/sha256/g' /etc/pam.d/chpasswd
+    sudo sed -i 's/sha512/sha256/g' /etc/pam.d/newusers
+    sudo sed -i 's/sha512/sha256/g' /etc/pam.d/passwd
+    sudo sed -i 's/SHA512/SHA256/g' /etc/login.defs
     # disable gnome keyring to speedup sddm
     sudo sed -i -e '/^[^#]/ s/\(^.*pam_gnome_keyring.*$\)/#\1/' /etc/pam.d/sddm
     sudo sed -i -e '/^[^#]/ s/\(^.*pam_gnome_keyring.*$\)/#\1/' /etc/pam.d/sddm-autologin
