@@ -143,7 +143,7 @@ function smart_install() {
         if [[ ${#conflict_packages[@]} > 0 ]]; then
             echo -e "\n${YELLOW}Conflict packages detected. Resovling conflict packages.${NC}"
             for ((i = 0; i < ${#conflict_packages[@]}; i++)); do
-                sudo pacman -Rcc --noconfirm ${conflict_packages[$i]} >/dev/null 2>&1
+                yes | sudo pacman -Rcc ${conflict_packages[$i]} >/dev/null 2>&1
                 if [[ $? -eq 0 ]]; then
                     echo -e "\n${GREEN}Uninstalled: ${conflict_packages[$i]} ${NC}"
                 else
