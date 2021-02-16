@@ -60,7 +60,7 @@ function smart_update() {
             done
         fi
 
-        local conflict_packages=($(cat /tmp/update.log | grep "are in conflict. Remove" | grep -o 'Remove [^ ]*' | grep -oE '[^ ]+$' | sed -e "s/[?]//"))
+        local conflict_packages=($(cat /tmp/update.log | grep 'are in conflict' | grep -o 'Remove [^ ]*' | grep -oE '[^ ]+$' | sed -e "s/[?]//"))
 
         if [[ ${#conflict_packages[@]} > 0 ]]; then
             echo -e "\n${YELLOW}Conflict packages detected. Resovling conflict packages.${NC}"
