@@ -413,6 +413,7 @@ function install_upgrade() {
         xdman \
         libreoffice-fresh \
         libreoffice-fresh-km \
+        kcalc \
         okular \
         spectacle \
         freemind \
