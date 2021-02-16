@@ -138,7 +138,7 @@ function smart_install() {
             done
         fi
 
-        local conflict_packages=($(cat conflict.txt | grep 'are in conflict' | grep -o 'Remove [^ ]*' | grep -oE '[^ ]+$' | sed -e "s/[?]//"))
+        local conflict_packages=($(cat /tmp/installation.log | grep 'are in conflict' | grep -o 'Remove [^ ]*' | grep -oE '[^ ]+$' | sed -e "s/[?]//"))
 
         if [[ ${#conflict_packages[@]} > 0 ]]; then
             echo -e "\n${YELLOW}Conflict packages detected. Resovling conflict packages.${NC}"
