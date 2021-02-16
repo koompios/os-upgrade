@@ -387,7 +387,7 @@ function install_upgrade() {
         fcitx5-material-color \
         fcitx5-table-extra \
         fcitx5-table-other \
-        ttf-khmer \
+        khmer-fonts \
         inter-font \
         noto-fonts \
         noto-fonts-cjk \
