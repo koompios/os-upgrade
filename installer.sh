@@ -281,14 +281,16 @@ function security_patch() {
     # Config faillock
     echo -e 'deny = 10\nunlock_time = 60\neven_deny_root\nroot_unlock_time = 600' | sudo tee /etc/security/faillock.conf >/dev/null 2>&1
     # Kernl message
-    echo -e 'kernel.printk = 1 1 1 1' | sudo tee /etc/sysctl.d/20-quiet-printk.conf >/dev/null 2>&1
+    [[ -f /etc/sysctl.d/20-quiet-printk.conf ]] && sudo rm /etc/sysctl.d/20-quiet-printk.conf
     # VM for usb
-    echo -e 'vm.dirty_background_bytes = 4194304\nvm.dirty_bytes = 4194304' | sudo tee /etc/sysctl.d/vm.conf >/dev/null 2>&1
+    echo -e 'vm.dirty_bytes = 4194304\n' | sudo tee /etc/sysctl.d/vm.conf >/dev/null 2>&1
     # systemd kill procress
     sudo sed -i 's/#DefaultTimeoutStopSec=90s/DefaultTimeoutStopSec=10s/g' /etc/systemd/system.conf >/dev/null 2>&1
     # network manager autoconnect
     echo -e '[connection]\nconnection.autoconnect-slaves=1' | sudo tee /etc/NetworkManager/NetworkManager.conf >/dev/null 2>&1
+    [[ -f /etc/systemd/network/20-ethernet.network ]] && sudo rm /etc/systemd/network/20-ethernet.network
     echo -e "[Match]\nName=en*\nName=eth*\n[Network]\nDHCP=yes\nIPv6PrivacyExtensions=yes\n[DHCP]\nRouteMetric=512\n" | sudo tee /etc/systemd/network/20-ethernet.network >/dev/null 2>&1
+    [[ -f /etc/systemd/network/20-wireless.network ]] && sudo  rm /etc/systemd/network/20-wireless.network
     echo -e "[Match]\nName=wlp*\nName=wlan*\n\n[Network]\nDHCP=yes\nIPv6PrivacyExtensions=yes\n\n[DHCP]\nRouteMetric=1024\n" | sudo tee /etc/systemd/network/20-wireless.network >/dev/null 2>&1
 
     # tweak login speed
@@ -311,10 +313,11 @@ function security_patch() {
     # hostname
     echo "koompi_os" | sudo tee /etc/hostname >/dev/null 2>&1
     # reflector
-    sudo systemctl disable pacman-init.service NetworkManager-wait-online.service >/dev/null 2>&1
-    sudo systemctl enable reflector.service >/dev/null 2>&1
+
     sudo systemctl enable haveged.service >/dev/null 2>&1
     sudo systemctl enable upower.service >/dev/null 2>&1
+
+    [[ ! -f /etc/systemd/system/pacman-init.service ]] && echo -e "[Unit]\nDescription=Initializes Pacman keyring\nWants=haveged.service\nAfter=haveged.service\nRequires=etc-pacman.d-gnupg.mount\nAfter=etc-pacman.d-gnupg.mount\n\n[Service]\nType=oneshot\nRemainAfterExit=yes\nExecStart=/usr/bin/pacman-key --init\nExecStart=/usr/bin/pacman-key --populate archlinux\n\n[Install]\nWantedBy=multi-user.target\n" | sudo tee /etc/systemd/system/pacman-init.service >/dev/null 2>&1
 
     echo -e '--save /etc/pacman.d/mirrorlist \n--country "Hong Kong" \n--country Singapore \n--country Japan \n--country China \n--latest 20 \n--protocol https --sort rate' | sudo tee /etc/xdg/reflector/reflector.conf >/dev/null 2>&1
 
@@ -367,13 +370,14 @@ function install_upgrade() {
         pix \
         koompi-skel \
         pacman-contrib \
-        linux \
-        linux-headers \
+        koompi-linux \
+        koompi-linux-headers \
+        grub \
         linux-firmware \
         intel-ucode \
         amd-ucode \
         acpi \
-        acpi_call-dkms \
+        acpi_call-lts \
         dkms \
         sddm \
         sddm-kcm \
@@ -500,15 +504,27 @@ function apply_new_theme() {
 }
 
 function update_grub() {
-    [[ -f /etc/default/grub ]] && sudo rm -rf /etc/default/grub
-    smart_install grub-silent
 
+    sudo pacman -Qi koompi-linux > /dev/null
+    if [[ $? -eq 0 ]]; then 
+        sudo pacman -Qi linux >/dev/null 2>&1
+        [[ $? -eq 0 ]] && sudo pacman -Rdd --noconfirm linux >/dev/null 2>&1
+        sudo pacman -Qi linux-headers >/dev/null 2>&1
+        [[ $? -eq 0 ]] && sudo pacman -Rdd --noconfirm linux-headers >/dev/null 2>&1
+    fi
+    
+
+    [[ -f /etc/default/grub ]] && sudo rm -rf /etc/default/grub
+    smart_install grub
+
+    sudo sed -i -e 's/GRUB_TIMEOUT=.*/GRUB_TIMEOUT=0/g' /etc/default/grub
     sudo sed -i -e 's/GRUB_DISTRIBUTOR=.*/GRUB_DISTRIBUTOR="KOOMPI_OS"/g' /etc/default/grub
+    sudo sed -i -e 's/GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT="quiet splash loglevel=0 rd.udev.log-priority=0 vt.global_cursor_default=0 fsck.mode=skip"/g' /etc/default/grub
     # kernel
 
     sudo sed -i -e "s/HOOKS=\"base udev.*/HOOKS=\"base systemd fsck autodetect modconf block keyboard keymap filesystems\"/g" /etc/mkinitcpio.conf
     sudo sed -i -e "s/HOOKS=(base udev.*/HOOKS=\"base systemd fsck autodetect modconf block keyboard keymap filesystems\"/g" /etc/mkinitcpio.conf
-    sudo mkinitcpio -p linux >/dev/null 2>&1
+    sudo mkinitcpio -p koompi-linux >/dev/null 2>&1
     grep "StandardOutput=null" /etc/systemd/system/systemd-fsck-root.service >/dev/null 2>&1
     if [[ $? == 1 ]]; then
         echo -e "\nStandardOutput=null\nStandardError=journal+console\n" | sudo EDITOR='tee -a' systemctl edit --full systemd-fsck-root.service >/dev/null 2>&1
