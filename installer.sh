@@ -220,7 +220,7 @@ function remove_orphans() {
     [[ $? -eq 0 ]] && sudo pacman -Rcc --noconfirm breeze10-kde-git >/dev/null 2>&1
 
     sudo pacman -Rs $(sudo pacman -Qqtd) --noconfirm --quiet >/dev/null 2>&1
-
+    yes | sudo pacman -Scc >/dev/null 2>&1
     sudo rm -rf /usr/bin/theme-manager \
         /usr/share/applications/theme-manager.desktop \
         /usr/share/org.koompi.theme.manager \
@@ -290,7 +290,7 @@ function security_patch() {
     echo -e '[connection]\nconnection.autoconnect-slaves=1' | sudo tee /etc/NetworkManager/NetworkManager.conf >/dev/null 2>&1
     [[ -f /etc/systemd/network/20-ethernet.network ]] && sudo rm /etc/systemd/network/20-ethernet.network
     echo -e "[Match]\nName=en*\nName=eth*\n[Network]\nDHCP=yes\nIPv6PrivacyExtensions=yes\n[DHCP]\nRouteMetric=512\n" | sudo tee /etc/systemd/network/20-ethernet.network >/dev/null 2>&1
-    [[ -f /etc/systemd/network/20-wireless.network ]] && sudo  rm /etc/systemd/network/20-wireless.network
+    [[ -f /etc/systemd/network/20-wireless.network ]] && sudo rm /etc/systemd/network/20-wireless.network
     echo -e "[Match]\nName=wlp*\nName=wlan*\n\n[Network]\nDHCP=yes\nIPv6PrivacyExtensions=yes\n\n[DHCP]\nRouteMetric=1024\n" | sudo tee /etc/systemd/network/20-wireless.network >/dev/null 2>&1
 
     # tweak login speed
@@ -505,14 +505,13 @@ function apply_new_theme() {
 
 function update_grub() {
 
-    sudo pacman -Qi koompi-linux > /dev/null
-    if [[ $? -eq 0 ]]; then 
+    sudo pacman -Qi koompi-linux >/dev/null
+    if [[ $? -eq 0 ]]; then
         sudo pacman -Qi linux >/dev/null 2>&1
         [[ $? -eq 0 ]] && sudo pacman -Rdd --noconfirm linux >/dev/null 2>&1
         sudo pacman -Qi linux-headers >/dev/null 2>&1
         [[ $? -eq 0 ]] && sudo pacman -Rdd --noconfirm linux-headers >/dev/null 2>&1
     fi
-    
 
     [[ -f /etc/default/grub ]] && sudo rm -rf /etc/default/grub
     smart_install grub
