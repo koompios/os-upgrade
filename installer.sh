@@ -507,10 +507,19 @@ function update_grub() {
 
     sudo pacman -Qi koompi-linux >/dev/null
     if [[ $? -eq 0 ]]; then
+
         sudo pacman -Qi linux >/dev/null 2>&1
         [[ $? -eq 0 ]] && sudo pacman -Rdd --noconfirm linux >/dev/null 2>&1
+
         sudo pacman -Qi linux-headers >/dev/null 2>&1
         [[ $? -eq 0 ]] && sudo pacman -Rdd --noconfirm linux-headers >/dev/null 2>&1
+
+        sudo pacman -Qi linux-lts-headers >/dev/null 2>&1
+        [[ $? -eq 0 ]] && sudo pacman -Rdd --noconfirm linux-lts-headers >/dev/null 2>&1
+
+        sudo pacman -Qi linux-lts >/dev/null 2>&1
+        [[ $? -eq 0 ]] && sudo pacman -Rdd --noconfirm linux-lts >/dev/null 2>&1
+
     fi
 
     [[ -f /etc/default/grub ]] && sudo rm -rf /etc/default/grub
@@ -523,7 +532,9 @@ function update_grub() {
 
     sudo sed -i -e "s/HOOKS=\"base udev.*/HOOKS=\"base systemd fsck autodetect modconf block keyboard keymap filesystems\"/g" /etc/mkinitcpio.conf
     sudo sed -i -e "s/HOOKS=(base udev.*/HOOKS=\"base systemd fsck autodetect modconf block keyboard keymap filesystems\"/g" /etc/mkinitcpio.conf
+
     sudo mkinitcpio -p koompi-linux >/dev/null 2>&1
+
     grep "StandardOutput=null" /etc/systemd/system/systemd-fsck-root.service >/dev/null 2>&1
     if [[ $? == 1 ]]; then
         echo -e "\nStandardOutput=null\nStandardError=journal+console\n" | sudo EDITOR='tee -a' systemctl edit --full systemd-fsck-root.service >/dev/null 2>&1
