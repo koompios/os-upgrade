@@ -120,7 +120,7 @@ function smart_install() {
     if [[ $smart_install_retries > 0 ]]; then
         [[ $smart_install_retries < 5 ]] && echo -e "\n${GREEN}Smart install pass: $smart_install_retries${NC}" || echo -e "\n${YELLOW}Smart install pass: $smart_install_retries${NC}"
     fi
-    sudo pacman -Syy --noconfirm --needed $@ >/dev/null 2>&1 >/tmp/installation.log
+    sudo pacman -Syy --noconfirm $@ >/dev/null 2>&1 >/tmp/installation.log
     if [[ $? -eq 1 ]]; then
         sudo find /var/cache/pacman/pkg/ -iname "*.part" -delete >/dev/null 2>&1
 
@@ -203,16 +203,9 @@ function refresh_mirror() {
     sudo sed -i '/0x.sg/d' /etc/pacman.d/mirrorlist
 }
 
-function smart_remove() {
-    for pkg in $@; do
-        sudo pacman -Qi $pkg >/dev/null 2>&1
-        [[ $? -eq 0 ]] && sudo pacman -Rdd --noconfirm $pkg
-    done
-}
-
 function remove_orphans() {
 
-    sudo pacman -Qi linux-apfs-dkms-git >/dev/null
+    sudo pacman -Qi linux-apfs-dkms-git >/dev/null 2>&1
     [[ $? -eq 0 ]] && sudo pacman -Rdd --noconfirm linux-apfs-dkms-git >/dev/null 2>&1
     sudo pacman -Qi hfsprogs >/dev/null 2>&1
     [[ $? -eq 0 ]] && sudo pacman -Rdd --noconfirm hfsprogs >/dev/null 2>&1
@@ -287,7 +280,7 @@ function security_patch() {
     echo -e '%wheel ALL=(ALL) ALL' | sudo EDITOR='tee' visudo -f /etc/sudoers.d/10-installer >/dev/null 2>&1
     # Config faillock
     echo -e 'deny = 10\nunlock_time = 60\neven_deny_root\nroot_unlock_time = 600' | sudo tee /etc/security/faillock.conf >/dev/null 2>&1
-    # Kernel message
+    # Kernl message
     [[ -f /etc/sysctl.d/20-quiet-printk.conf ]] && sudo rm /etc/sysctl.d/20-quiet-printk.conf
     # VM for usb
     echo -e 'vm.dirty_bytes = 4194304\n' | sudo tee /etc/sysctl.d/vm.conf >/dev/null 2>&1
@@ -301,22 +294,18 @@ function security_patch() {
     echo -e "[Match]\nName=wlp*\nName=wlan*\n\n[Network]\nDHCP=yes\nIPv6PrivacyExtensions=yes\n\n[DHCP]\nRouteMetric=1024\n" | sudo tee /etc/systemd/network/20-wireless.network >/dev/null 2>&1
 
     # tweak login speed
-    grep "sha256" /etc/pam.d/chpasswd > /dev/null
-    [[ $? == 0 ]] && sudo sed -i 's/sha256/sha512/g' /etc/pam.d/chpasswd
-    grep "sha256" /etc/pam.d/newusers > /dev/null
-    [[ $? == 0 ]] && sudo sed -i 's/sha256/sha512/g' /etc/pam.d/newusers
-    grep "sha256" /etc/pam.d/passwd > /dev/null
-    [[ $? == 0 ]] && sudo sed -i 's/sha256/sha512/g' /etc/pam.d/passwd
-    grep "sha256" /etc/login.defs > /dev/null
-    [[ $? == 0 ]] && sudo sed -i 's/sha256/sha512/g' /etc/login.defs
+    sudo sed -i 's/sha512/sha256/g' /etc/pam.d/chpasswd
+    sudo sed -i 's/sha512/sha256/g' /etc/pam.d/newusers
+    sudo sed -i 's/sha512/sha256/g' /etc/pam.d/passwd
+    sudo sed -i 's/SHA512/SHA256/g' /etc/login.defs
     # disable gnome keyring to speedup sddm
-    # sudo sed -i -e '/^[^#]/ s/\(^.*pam_gnome_keyring.*$\)/#\1/' /etc/pam.d/sddm
-    # sudo sed -i -e '/^[^#]/ s/\(^.*pam_gnome_keyring.*$\)/#\1/' /etc/pam.d/sddm-autologin
+    sudo sed -i -e '/^[^#]/ s/\(^.*pam_gnome_keyring.*$\)/#\1/' /etc/pam.d/sddm
+    sudo sed -i -e '/^[^#]/ s/\(^.*pam_gnome_keyring.*$\)/#\1/' /etc/pam.d/sddm-autologin
     # disable kwallet keyring to speedup sddm
-    # sudo sed -i -e '/^[^#]/ s/\(^.*pam_kwallet5.*$\)/#\1/' /etc/pam.d/sddm
-    # sudo sed -i -e '/^[^#]/ s/\(^.*pam_kwallet5.*$\)/#\1/' /etc/pam.d/sddm-autologin
+    sudo sed -i -e '/^[^#]/ s/\(^.*pam_kwallet5.*$\)/#\1/' /etc/pam.d/sddm
+    sudo sed -i -e '/^[^#]/ s/\(^.*pam_kwallet5.*$\)/#\1/' /etc/pam.d/sddm-autologin
     # release config
-    echo -e "[General]\nName=KOOMPI OS\nPRETTY_NAME=KOOMPI OS\nLogoPath=/usr/share/icons/koompi/koompi.svg\nWebsite=http://www.koompi.com\nVersion=2.7.0\nVariant=Rolling Release\nUseOSReleaseVersion=false" | sudo tee /etc/xdg/kcm-about-distrorc >/dev/null 2>&1
+    echo -e "[General]\nName=KOOMPI OS\nPRETTY_NAME=KOOMPI OS\nLogoPath=/usr/share/icons/koompi/koompi.svg\nWebsite=http://www.koompi.com\nVersion=2.6.0\nVariant=Rolling Release\nUseOSReleaseVersion=false" | sudo tee /etc/xdg/kcm-about-distrorc >/dev/null 2>&1
     echo -e 'NAME="KOOMPI OS"\nPRETTY_NAME="KOOMPI OS"\nID=koompi\nBUILD_ID=rolling\nANSI_COLOR="38;2;23;147;209"\nHOME_URL="https://www.koompi.com/"\nDOCUMENTATION_URL="https://wiki.koompi.org/"\nSUPPORT_URL="https://t.me/koompi"\nBUG_REPORT_URL="https://t.me/koompi"\nLOGO=/usr/share/icons/koompi/koompi.svg' | sudo tee /etc/os-release >/dev/null 2>&1
     # nano config
     grep "include /usr/share/nano-syntax-highlighting/*.nanorc" /etc/nanorc >/dev/null 2>&1
@@ -324,13 +313,9 @@ function security_patch() {
     # hostname
     echo "koompi_os" | sudo tee /etc/hostname >/dev/null 2>&1
     # reflector
-    sudo mkdir -p /etc/iwd
-    
+
     sudo systemctl enable haveged.service >/dev/null 2>&1
     sudo systemctl enable upower.service >/dev/null 2>&1
-    # IWD Config
-    echo -e "[Settings]\nAutoConnect=true\n\n[Scan]\nDisablePeriodicScan=false\nInitialPeriodicScanInterval=1\nMaximumPeriodicScanInterval=10\n" | sudo tee -a /etc/iwd/main.conf >/dev/null 2>&1
-    echo -e "[device]\nwifi.backend=iwd\n" | sudo tee -a /etc/NetworkManager/conf.d/iwd.conf >/dev/null 2>&1
 
     [[ ! -f /etc/systemd/system/pacman-init.service ]] && echo -e "[Unit]\nDescription=Initializes Pacman keyring\nWants=haveged.service\nAfter=haveged.service\nRequires=etc-pacman.d-gnupg.mount\nAfter=etc-pacman.d-gnupg.mount\n\n[Service]\nType=oneshot\nRemainAfterExit=yes\nExecStart=/usr/bin/pacman-key --init\nExecStart=/usr/bin/pacman-key --populate archlinux\n\n[Install]\nWantedBy=multi-user.target\n" | sudo tee /etc/systemd/system/pacman-init.service >/dev/null 2>&1
 
@@ -339,8 +324,7 @@ function security_patch() {
     PRODUCT=$(cat /sys/class/dmi/id/product_name)
 
     if [[ ${PRODUCT} == "KOOMPI E11" ]]; then
-        smart_remove rtl8723bu-git-dkms
-        smart_install rtl8723bu-dkms-koompi >/dev/null 2>&1
+        smart_install rtl8723bu-git-dkms >/dev/null 2>&1
     fi
 
     sudo systemctl enable --now systemd-timedated systemd-timesyncd >/dev/null 2>&1
@@ -393,12 +377,12 @@ function install_upgrade() {
         intel-ucode \
         amd-ucode \
         acpi \
-        acpi_call-koompi-linux \
+        acpi_call-lts \
         dkms \
         sddm \
         sddm-kcm \
-        koompi-libinput \
-        koompi-xf86-input-libinput \
+        libinput \
+        xf86-input-libinput \
         xorg-xinput \
         libinput-gestures \
         libinput_gestures_qt \
@@ -409,9 +393,10 @@ function install_upgrade() {
         fcitx5-configtool \
         fcitx5-gtk \
         fcitx5-qt \
+        fcitx5-chewing \
         fcitx5-chinese-addons \
         fcitx5-hangul \
-        fcitx5-mozc \
+        fcitx5-anthy \
         fcitx5-material-color \
         fcitx5-table-extra \
         fcitx5-table-other \
@@ -452,11 +437,15 @@ function install_upgrade() {
         gwenview \
         vlc \
         kdenlive \
+        handbrake \
         obs-studio \
         webcamoid-git \
         libuvc \
         akvcam-dkms-git \
         elisa \
+        pulseaudio \
+        pulseaudio-alsa \
+        pulseaudio-bluetooth \
         ark \
         zip \
         unzip \
@@ -497,48 +486,7 @@ function install_upgrade() {
         archlinux-keyring \
         zstd \
         bash-completion \
-        ntp \
-        imount \
-        bomi-git \
-        sel-protocol \
-        grub-hook \
-        webkit2gtk \
-        iwd \
-        networkmanager-iwd \
-        sel-protocol 
-
-}
-
-function remove_dropped_packages() {
-    smart_remove \
-        handbrake \
-        pipewire-jack \
-        bind \
-        clonezilla \
-        darkhttpd \
-        ddrescue \
-        espeakup \
-        fcitx5-chewing \
-        fcitx5-rime \
-        lftp \
-        livecd-sound \
-        lynx \
-        mkinitcpio-archiso \
-        nbd \
-        openconnect \
-        pipewire-jack \
-        pptpclient \
-        rp-pppoe \
-        wvdial \
-        xl2tpd \
-        tcpdump \
-        vpnc \
-        pulseaudio \
-        pulseaudio-alsa \
-        pulseaudio-jack \
-        pulseaudio-bluetooth \
-        libinput \
-        xf86-input-libinput
+        ntp
 
 }
 
@@ -557,7 +505,7 @@ function apply_new_theme() {
 
 function update_grub() {
 
-    sudo pacman -Qi koompi-linux > /dev/null 
+    sudo pacman -Qi koompi-linux >/dev/null
     if [[ $? -eq 0 ]]; then
 
         sudo pacman -Qi linux >/dev/null 2>&1
@@ -614,7 +562,7 @@ echo -e "${CYAN} ██║  ██╗╚██████╔╝╚████�
 echo -e "${CYAN} ╚═╝  ╚═╝ ╚═════╝  ╚═════╝ ╚═╝     ╚═╝╚═╝     ╚═╝     ╚═════╝ ╚══════╝ ${NC}"
 echo -e "${CYAN}====================================================================== ${NC}"
 echo -e ""
-echo -e "Upgrade to version 2.7.0"
+echo -e "Upgrade to version 2.6.0"
 echo -e "Initialzing generation upgrade"
 echo -e ""
 prevent_power_management
@@ -653,13 +601,7 @@ fi
 
 if [[ $continues -eq 1 ]]; then
     (install_upgrade) &
-    spinner "Upgrading to KOOMPI OS 2.7.0"
-    completed=$((completed + 1))
-fi
-
-if [[ $continues -eq 1 ]]; then
-    (remove_dropped_packages) &
-    spinner "Removing dropped packages"
+    spinner "Upgrading to KOOMPI OS 2.6.0"
     completed=$((completed + 1))
 fi
 
@@ -679,7 +621,7 @@ if [[ $continues -eq 1 ]]; then
     allow_power_management
     echo -e "${CYAN}====================================================================== ${NC}"
     echo -e ""
-    echo -e "${GREEN}Upgraded to version 2.7.0${NC}"
+    echo -e "${GREEN}Upgraded to version 2.6.0${NC}"
     echo -e "${YELLOW}Please restart your computer before continue using.${NC}"
     echo -e ""
 else
