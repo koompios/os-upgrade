@@ -589,29 +589,29 @@ prevent_power_management
 echo -e "${RED}NOTE: During update, do not turn off your computer.${NC}"
 echo -e ""
 
-# if [[ $continues -eq 1 ]]; then
-#     (insert_koompi_repo) &
-#     spinner "Updating the new repository of KOOMPI OS"
-#     completed=$((completed + 1))
-# fi
+if [[ $continues -eq 1 ]]; then
+    (insert_koompi_repo) &
+    spinner "Updating the new repository of KOOMPI OS"
+    completed=$((completed + 1))
+fi
 
-# if [[ $continues -eq 1 ]]; then
-#     (remove_orphans) &
-#     spinner "Cleaning up unneed packages"
-#     completed=$((completed + 1))
-# fi
+if [[ $continues -eq 1 ]]; then
+    (remove_orphans) &
+    spinner "Cleaning up unneed packages"
+    completed=$((completed + 1))
+fi
 
-# if [[ $continues -eq 1 ]]; then
-#     (refresh_mirror) &
-#     spinner "Ranking mirror repositories"
-#     completed=$((completed + 1))
-# fi
+if [[ $continues -eq 1 ]]; then
+    (refresh_mirror) &
+    spinner "Ranking mirror repositories"
+    completed=$((completed + 1))
+fi
 
-# if [[ $continues -eq 1 ]]; then
-#     (security_patch) &
-#     spinner "Updating the default security configurations"
-#     completed=$((completed + 1))
-# fi
+if [[ $continues -eq 1 ]]; then
+    (security_patch) &
+    spinner "Updating the default security configurations"
+    completed=$((completed + 1))
+fi
 
 if [[ $continues -eq 1 ]]; then
     (remove_dropped_packages) &
