@@ -120,7 +120,8 @@ function smart_install() {
     if [[ $smart_install_retries > 0 ]]; then
         [[ $smart_install_retries < 5 ]] && echo -e "\n${GREEN}Smart install pass: $smart_install_retries${NC}" || echo -e "\n${YELLOW}Smart install pass: $smart_install_retries${NC}"
     fi
-    sudo pacman -Syy --noconfirm $@ --overwrite="*" >/dev/null 2>&1 >/tmp/installation.log
+    sudo pacman -Syy >/dev/null 2>&1
+    sudo pacman -S --noconfirm $@ --overwrite="*" > /dev/null 2>&1 >/tmp/installation.log
     if [[ $? -eq 1 ]]; then
         sudo find /var/cache/pacman/pkg/ -iname "*.part" -delete >/dev/null 2>&1
 
@@ -193,6 +194,7 @@ function smart_install() {
 }
 
 function refresh_mirror() {
+
     sudo sed -i 's/Required[[:space:]]DatabaseOptional/Never/g' /etc/pacman.conf >/dev/null 2>&1
     sudo sed -i '/0x.sg/d' /etc/pacman.d/mirrorlist
     smart_install archlinux-keyring
@@ -205,8 +207,8 @@ function refresh_mirror() {
 
 function smart_remove() {
     for pkg in $@; do
-        sudo pacman -Qi $pkg >/dev/null 2>&1
-        [[ $? -eq 0 ]] && sudo pacman -Rdd --noconfirm $pkg
+        sudo pacman -Qi $pkg > /dev/null 2>&1
+        [[ $? -eq 0 ]] && sudo pacman -Rdd --noconfirm $pkg > /dev/null 2>&1 >> /tmp/uninstallation.log
     done
 }
 
@@ -229,7 +231,6 @@ function remove_orphans() {
     [[ $? -eq 0 ]] && sudo pacman -Rcc --noconfirm breeze10-kde-git >/dev/null 2>&1
 
     sudo pacman -Rs $(sudo pacman -Qqtd) --noconfirm --quiet >/dev/null 2>&1
-    yes | sudo pacman -Scc >/dev/null 2>&1
 
     [[ -f /etc/sddm.conf ]] && sudo rm -rf /etc/sddm.conf
     rm -rf ${HOME}/.config/Kvantum/Fluent-Dark \
@@ -337,25 +338,18 @@ function security_patch() {
 }
 
 function install_upgrade() {
-    # install audio
     smart_install \
         pipewire \
         pipewire-pulse \
-        pipewire-alas \
-        pipewire-pipewire-media-session
-    # install network
-    smart_install \
+        pipewire-alsa \
+        pipewire-media-session \
         iwd \
         networkmanager-iwd \
-    # install desktop
-    smart_install \
         plasma \
         plasma-pa \
         plasma-nm \
         sddm \
-        sddm-kcm
-    # install koompi deskotp
-    smart_install \
+        sddm-kcm \
         koompi-wallpapers \
         koompi-plasma-themes \
         sddm-theme-koompi \
@@ -372,9 +366,7 @@ function install_upgrade() {
         latte-dock \
         kwin-scripts-parachute \
         kwin-scripts-sticky-window-snapping-git \
-        koompi-skel
-    # install key input method
-    smart_install \
+        koompi-skel \
         fcitx5 \
         fcitx5-configtool \
         fcitx5-gtk \
@@ -384,24 +376,18 @@ function install_upgrade() {
         fcitx5-mozc \
         fcitx5-material-color \
         fcitx5-table-extra \
-        fcitx5-table-other
-    # install pointing input
-    smart_install \
+        fcitx5-table-other \
         koompi-libinput \
         koompi-xf86-input-libinput \
         xorg-xinput \
         libinput-gestures \
         libinput_gestures_qt \
-        xdotool
-    # install fonts
-    smart_install \
+        xdotool \
         khmer-fonts \
         inter-font \
         noto-fonts \
         noto-fonts-cjk \
-        noto-fonts-emoji
-    # install printing
-    smart_install \
+        noto-fonts-emoji \
         cups \
         libcups \
         cups-pdf \
@@ -418,9 +404,7 @@ function install_upgrade() {
         system-config-printer \
         nss-mdns \
         hplip \
-        a2ps
-    # install core system
-    smart_install \
+        a2ps \
         koompi-pacman-hooks \
         pi \
         pix \
@@ -430,10 +414,8 @@ function install_upgrade() {
         bash-completion \
         ntp \
         imount \
-        havege \
-        upower
-    # install kernel, modules, and bootloader
-    smart_install \
+        haveged \
+        upower \
         koompi-linux \
         koompi-linux-headers \
         linux-firmware \
@@ -444,10 +426,7 @@ function install_upgrade() {
         dkms \
         grub \
         grub-hook \
-        os-prober
-
-    # install gui apps
-    smart_install \
+        os-prober \
         dolphin \
         kio \
         kio-extras \
@@ -500,15 +479,15 @@ function install_upgrade() {
         bomi-git \
         sel-protocol \
         webkit2gtk \
-        sel-protocol 
-
+        sel-protocol \
+        ksysguard
 }
 
 function remove_dropped_packages() {
     smart_remove \
         handbrake \
         pipewire-jack \
-        bind \
+        bind-tools \
         clonezilla \
         darkhttpd \
         ddrescue \
@@ -532,8 +511,7 @@ function remove_dropped_packages() {
         pulseaudio-jack \
         pulseaudio-bluetooth \
         libinput \
-        xf86-input-libinput
-
+        xf86-input-libinput ;
 }
 
 function apply_new_theme() {
@@ -568,14 +546,10 @@ function update_grub() {
 
     fi
 
-    [[ -f /etc/default/grub ]] && sudo rm -rf /etc/default/grub
-    smart_install grub
-
     sudo sed -i -e 's/GRUB_TIMEOUT=.*/GRUB_TIMEOUT=0/g' /etc/default/grub
     sudo sed -i -e 's/GRUB_DISTRIBUTOR=.*/GRUB_DISTRIBUTOR="KOOMPI_OS"/g' /etc/default/grub
     sudo sed -i -e 's/GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT="quiet splash loglevel=0 rd.udev.log-priority=0 vt.global_cursor_default=0 fsck.mode=skip"/g' /etc/default/grub
     # kernel
-
     sudo sed -i -e "s/HOOKS=\"base udev.*/HOOKS=\"base systemd fsck autodetect modconf block keyboard keymap filesystems\"/g" /etc/mkinitcpio.conf
     sudo sed -i -e "s/HOOKS=(base udev.*/HOOKS=\"base systemd fsck autodetect modconf block keyboard keymap filesystems\"/g" /etc/mkinitcpio.conf
 
@@ -615,29 +589,29 @@ prevent_power_management
 echo -e "${RED}NOTE: During update, do not turn off your computer.${NC}"
 echo -e ""
 
-if [[ $continues -eq 1 ]]; then
-    (insert_koompi_repo) &
-    spinner "Updating the new repository of KOOMPI OS"
-    completed=$((completed + 1))
-fi
+# if [[ $continues -eq 1 ]]; then
+#     (insert_koompi_repo) &
+#     spinner "Updating the new repository of KOOMPI OS"
+#     completed=$((completed + 1))
+# fi
 
-if [[ $continues -eq 1 ]]; then
-    (remove_orphans) &
-    spinner "Cleaning up unneed packages"
-    completed=$((completed + 1))
-fi
+# if [[ $continues -eq 1 ]]; then
+#     (remove_orphans) &
+#     spinner "Cleaning up unneed packages"
+#     completed=$((completed + 1))
+# fi
 
-if [[ $continues -eq 1 ]]; then
-    (refresh_mirror) &
-    spinner "Ranking mirror repositories"
-    completed=$((completed + 1))
-fi
+# if [[ $continues -eq 1 ]]; then
+#     (refresh_mirror) &
+#     spinner "Ranking mirror repositories"
+#     completed=$((completed + 1))
+# fi
 
-if [[ $continues -eq 1 ]]; then
-    (security_patch) &
-    spinner "Updating the default security configurations"
-    completed=$((completed + 1))
-fi
+# if [[ $continues -eq 1 ]]; then
+#     (security_patch) &
+#     spinner "Updating the default security configurations"
+#     completed=$((completed + 1))
+# fi
 
 if [[ $continues -eq 1 ]]; then
     (remove_dropped_packages) &
