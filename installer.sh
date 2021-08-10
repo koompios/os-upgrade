@@ -120,7 +120,7 @@ function smart_install() {
     if [[ $smart_install_retries > 0 ]]; then
         [[ $smart_install_retries < 5 ]] && echo -e "\n${GREEN}Smart install pass: $smart_install_retries${NC}" || echo -e "\n${YELLOW}Smart install pass: $smart_install_retries${NC}"
     fi
-    sudo pacman -Syy --noconfirm --needed $@ >/dev/null 2>&1 >/tmp/installation.log
+    sudo pacman -Syy --noconfirm $@ --overwrite="*" >/dev/null 2>&1 >/tmp/installation.log
     if [[ $? -eq 1 ]]; then
         sudo find /var/cache/pacman/pkg/ -iname "*.part" -delete >/dev/null 2>&1
 
@@ -214,32 +214,23 @@ function remove_orphans() {
 
     sudo pacman -Qi linux-apfs-dkms-git >/dev/null
     [[ $? -eq 0 ]] && sudo pacman -Rdd --noconfirm linux-apfs-dkms-git >/dev/null 2>&1
+    
     sudo pacman -Qi hfsprogs >/dev/null 2>&1
     [[ $? -eq 0 ]] && sudo pacman -Rdd --noconfirm hfsprogs >/dev/null 2>&1
-    sudo pacman -Qi raptor >/dev/null 2>&1
-    [[ $? -eq 0 ]] && sudo pacman -Rdd --noconfirm raptor >/dev/null 2>&1
+    
     sudo pacman -Qi fcitx >/dev/null 2>&1
     [[ $? -eq 0 ]] && sudo pacman -Rcc --noconfirm fcitx-im >/dev/null 2>&1
+    
     sudo pacman -Qi libreoffice-still >/dev/null 2>&1
     [[ $? -eq 0 ]] && sudo pacman -Rcc --noconfirm libreoffice-still >/dev/null 2>&1
-    # remove prvoise koompi theme
+    
+    # remove previous koompi theme
     sudo pacman -Qi breeze10-kde-git >/dev/null 2>&1
     [[ $? -eq 0 ]] && sudo pacman -Rcc --noconfirm breeze10-kde-git >/dev/null 2>&1
 
     sudo pacman -Rs $(sudo pacman -Qqtd) --noconfirm --quiet >/dev/null 2>&1
     yes | sudo pacman -Scc >/dev/null 2>&1
-    sudo rm -rf /usr/bin/theme-manager \
-        /usr/share/applications/theme-manager.desktop \
-        /usr/share/org.koompi.theme.manager \
-        /usr/share/sddm/themes/kameleon \
-        /usr/share/sddm/themes/McMojave \
-        /usr/share/sddm/themes/plasma-chili \
-        /usr/share/wallpapers/koompi-dark.svg \
-        /usr/share/wallpapers/koompi-light.jpg \
-        /usr/share/wallpapers/mosx-dark.jpg \
-        /usr/share/wallpapers/mosx-light.jpg \
-        /usr/share/wallpapers/winx-dark.jpg \
-        /usr/share/wallpapers/winx-light.jpg >/dev/null 2>&1
+
     [[ -f /etc/sddm.conf ]] && sudo rm -rf /etc/sddm.conf
     rm -rf ${HOME}/.config/Kvantum/Fluent-Dark \
         ${HOME}/.config/Kvantum/Fluent-Light \
@@ -269,8 +260,7 @@ function remove_orphans() {
         ${HOME}/.local/share/plasma/plasmoids/org.communia.apptitle \
         ${HOME}/.local/share/plasma/plasmoids/org.kde.plasma.chiliclock \
         ${HOME}/.local/share/plasma/plasmoids/org.kde.plasma.umenu \
-        ${HOME}/.local/share/plasma/plasmoids/org.kde.plasma.win7showdesktop \
-        ${HOME}/Desktop/theme-manager.desktop >/dev/null 2>&1
+        ${HOME}/.local/share/plasma/plasmoids/org.kde.plasma.win7showdesktop >/dev/null 2>&1
 }
 
 function insert_koompi_repo() {
@@ -300,21 +290,6 @@ function security_patch() {
     [[ -f /etc/systemd/network/20-wireless.network ]] && sudo rm /etc/systemd/network/20-wireless.network
     echo -e "[Match]\nName=wlp*\nName=wlan*\n\n[Network]\nDHCP=yes\nIPv6PrivacyExtensions=yes\n\n[DHCP]\nRouteMetric=1024\n" | sudo tee /etc/systemd/network/20-wireless.network >/dev/null 2>&1
 
-    # tweak login speed
-    grep "sha256" /etc/pam.d/chpasswd > /dev/null
-    [[ $? == 0 ]] && sudo sed -i 's/sha256/sha512/g' /etc/pam.d/chpasswd
-    grep "sha256" /etc/pam.d/newusers > /dev/null
-    [[ $? == 0 ]] && sudo sed -i 's/sha256/sha512/g' /etc/pam.d/newusers
-    grep "sha256" /etc/pam.d/passwd > /dev/null
-    [[ $? == 0 ]] && sudo sed -i 's/sha256/sha512/g' /etc/pam.d/passwd
-    grep "sha256" /etc/login.defs > /dev/null
-    [[ $? == 0 ]] && sudo sed -i 's/sha256/sha512/g' /etc/login.defs
-    # disable gnome keyring to speedup sddm
-    # sudo sed -i -e '/^[^#]/ s/\(^.*pam_gnome_keyring.*$\)/#\1/' /etc/pam.d/sddm
-    # sudo sed -i -e '/^[^#]/ s/\(^.*pam_gnome_keyring.*$\)/#\1/' /etc/pam.d/sddm-autologin
-    # disable kwallet keyring to speedup sddm
-    # sudo sed -i -e '/^[^#]/ s/\(^.*pam_kwallet5.*$\)/#\1/' /etc/pam.d/sddm
-    # sudo sed -i -e '/^[^#]/ s/\(^.*pam_kwallet5.*$\)/#\1/' /etc/pam.d/sddm-autologin
     # release config
     echo -e "[General]\nName=KOOMPI OS\nPRETTY_NAME=KOOMPI OS\nLogoPath=/usr/share/icons/koompi/koompi.svg\nWebsite=http://www.koompi.com\nVersion=2.7.0\nVariant=Rolling Release\nUseOSReleaseVersion=false" | sudo tee /etc/xdg/kcm-about-distrorc >/dev/null 2>&1
     echo -e 'NAME="KOOMPI OS"\nPRETTY_NAME="KOOMPI OS"\nID=koompi\nBUILD_ID=rolling\nANSI_COLOR="38;2;23;147;209"\nHOME_URL="https://www.koompi.com/"\nDOCUMENTATION_URL="https://wiki.koompi.org/"\nSUPPORT_URL="https://t.me/koompi"\nBUG_REPORT_URL="https://t.me/koompi"\nLOGO=/usr/share/icons/koompi/koompi.svg' | sudo tee /etc/os-release >/dev/null 2>&1
@@ -324,11 +299,10 @@ function security_patch() {
     # hostname
     echo "koompi_os" | sudo tee /etc/hostname >/dev/null 2>&1
     # reflector
-    sudo mkdir -p /etc/iwd
-    
     sudo systemctl enable haveged.service >/dev/null 2>&1
     sudo systemctl enable upower.service >/dev/null 2>&1
     # IWD Config
+    sudo mkdir -p /etc/iwd
     echo -e "[Settings]\nAutoConnect=true\n\n[Scan]\nDisablePeriodicScan=false\nInitialPeriodicScanInterval=1\nMaximumPeriodicScanInterval=10\n" | sudo tee -a /etc/iwd/main.conf >/dev/null 2>&1
     echo -e "[device]\nwifi.backend=iwd\n" | sudo tee -a /etc/NetworkManager/conf.d/iwd.conf >/dev/null 2>&1
 
@@ -339,7 +313,6 @@ function security_patch() {
     PRODUCT=$(cat /sys/class/dmi/id/product_name)
 
     if [[ ${PRODUCT} == "KOOMPI E11" ]]; then
-        smart_remove rtl8723bu-git-dkms
         smart_install rtl8723bu-dkms-koompi >/dev/null 2>&1
     fi
 
@@ -364,8 +337,24 @@ function security_patch() {
 }
 
 function install_upgrade() {
-    sudo rm -rf /etc/skel
-
+    # install audio
+    smart_install \
+        pipewire \
+        pipewire-pulse \
+        pipewire-alas \
+        pipewire-pipewire-media-session
+    # install network
+    smart_install \
+        iwd \
+        networkmanager-iwd \
+    # install desktop
+    smart_install \
+        plasma \
+        plasma-pa \
+        plasma-nm \
+        sddm \
+        sddm-kcm
+    # install koompi deskotp
     smart_install \
         koompi-wallpapers \
         koompi-plasma-themes \
@@ -381,30 +370,11 @@ function install_upgrade() {
         kvantum-theme-fluent-git \
         koompi-theme-manager-qt5 \
         latte-dock \
-        koompi-pacman-hooks \
-        pi \
-        pix \
-        koompi-skel \
-        pacman-contrib \
-        koompi-linux \
-        koompi-linux-headers \
-        grub \
-        linux-firmware \
-        intel-ucode \
-        amd-ucode \
-        acpi \
-        acpi_call-koompi-linux \
-        dkms \
-        sddm \
-        sddm-kcm \
-        koompi-libinput \
-        koompi-xf86-input-libinput \
-        xorg-xinput \
-        libinput-gestures \
-        libinput_gestures_qt \
-        xdotool \
         kwin-scripts-parachute \
         kwin-scripts-sticky-window-snapping-git \
+        koompi-skel
+    # install key input method
+    smart_install \
         fcitx5 \
         fcitx5-configtool \
         fcitx5-gtk \
@@ -414,12 +384,70 @@ function install_upgrade() {
         fcitx5-mozc \
         fcitx5-material-color \
         fcitx5-table-extra \
-        fcitx5-table-other \
+        fcitx5-table-other
+    # install pointing input
+    smart_install \
+        koompi-libinput \
+        koompi-xf86-input-libinput \
+        xorg-xinput \
+        libinput-gestures \
+        libinput_gestures_qt \
+        xdotool
+    # install fonts
+    smart_install \
         khmer-fonts \
         inter-font \
         noto-fonts \
         noto-fonts-cjk \
-        noto-fonts-emoji \
+        noto-fonts-emoji
+    # install printing
+    smart_install \
+        cups \
+        libcups \
+        cups-pdf \
+        cups-filters \
+        cups-pk-helper \
+        foomatic-db-engine \
+        foomatic-db \
+        foomatic-db-ppds \
+        foomatic-db-nonfree \
+        foomatic-db-nonfree-ppds \
+        gutenprint \
+        foomatic-db-gutenprint-ppds \
+        libpaper \
+        system-config-printer \
+        nss-mdns \
+        hplip \
+        a2ps
+    # install core system
+    smart_install \
+        koompi-pacman-hooks \
+        pi \
+        pix \
+        pacman-contrib \
+        archlinux-keyring \
+        zstd \
+        bash-completion \
+        ntp \
+        imount \
+        havege \
+        upower
+    # install kernel, modules, and bootloader
+    smart_install \
+        koompi-linux \
+        koompi-linux-headers \
+        linux-firmware \
+        intel-ucode \
+        amd-ucode \
+        acpi \
+        acpi_call-koompi-linux \
+        dkms \
+        grub \
+        grub-hook \
+        os-prober
+
+    # install gui apps
+    smart_install \
         dolphin \
         kio \
         kio-extras \
@@ -462,49 +490,16 @@ function install_upgrade() {
         unzip \
         unrar \
         p7zip \
-        partitionmanager \
-        filelight \
-        kdf \
         anydesk \
-        knewstuff \
-        kitemmodels \
-        kdeclarative \
-        qt5-graphicaleffects \
         appstream-qt \
         archlinux-appstream-data \
         hicolor-icon-theme \
-        kirigami2 \
-        discount \
-        kuserfeedback \
+        kdf \
+        partitionmanager \
         packagekit-qt5 \
-        cups \
-        libcups \
-        cups-pdf \
-        cups-filters \
-        cups-pk-helper \
-        foomatic-db-engine \
-        foomatic-db \
-        foomatic-db-ppds \
-        foomatic-db-nonfree \
-        foomatic-db-nonfree-ppds \
-        gutenprint \
-        foomatic-db-gutenprint-ppds \
-        libpaper \
-        system-config-printer \
-        nss-mdns \
-        hplip \
-        a2ps \
-        archlinux-keyring \
-        zstd \
-        bash-completion \
-        ntp \
-        imount \
         bomi-git \
         sel-protocol \
-        grub-hook \
         webkit2gtk \
-        iwd \
-        networkmanager-iwd \
         sel-protocol 
 
 }
@@ -526,7 +521,6 @@ function remove_dropped_packages() {
         mkinitcpio-archiso \
         nbd \
         openconnect \
-        pipewire-jack \
         pptpclient \
         rp-pppoe \
         wvdial \
@@ -646,6 +640,12 @@ if [[ $continues -eq 1 ]]; then
 fi
 
 if [[ $continues -eq 1 ]]; then
+    (remove_dropped_packages) &
+    spinner "Removing dropped packages"
+    completed=$((completed + 1))
+fi
+
+if [[ $continues -eq 1 ]]; then
     (smart_update) &
     spinner "Updating all installed applications"
     completed=$((completed + 1))
@@ -657,11 +657,6 @@ if [[ $continues -eq 1 ]]; then
     completed=$((completed + 1))
 fi
 
-if [[ $continues -eq 1 ]]; then
-    (remove_dropped_packages) &
-    spinner "Removing dropped packages"
-    completed=$((completed + 1))
-fi
 
 if [[ $continues -eq 1 ]]; then
     (update_grub) &
