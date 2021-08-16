@@ -525,6 +525,10 @@ function apply_new_theme() {
     mkdir -p /etc/sddm.conf.d/
     echo -e "[Autologin]\nRelogin=false\nSession=\nUser=\n\n[General]\nHaltCommand=/usr/bin/systemctl poweroff\nRebootCommand=/usr/bin/systemctl reboot\n\n[Theme]\nCurrent=koompi-dark\n\n[Users]\nMaximumUid=60000\nMinimumUid=1000\n" | sudo tee /etc/sddm.conf.d/kde_settings.conf >/dev/null 2>&1
     sh /usr/share/org.koompi.theme.manager/kmp-dark.sh >/dev/null 2>&1
+
+    mkdir -p $HOME/.local/bin
+    cp /etc/skel/.local/bin/bluetooth-off-on-boot.sh $HOME/.local/bin
+    chmod +x $HOME/.local/bin/bluetooth-off-on-boot.sh
 }
 
 function update_grub() {
