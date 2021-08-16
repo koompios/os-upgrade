@@ -3,5 +3,9 @@
 Upgrading KOOMPI OS to the latest release is no longer required to install from the ISO. This project aims to making upgrading OS easily by just running one command. Copy and paste the command below into your terminal and done.
 
 ```bash
+<<<<<<< HEAD
 curl -Ssf https://raw.githubusercontent.com/koompi/os-upgrade/master/installer.sh | sh
+=======
+curl -Ssf https://raw.githubusercontent.com/koompi/os-upgrade/2.7.0/installer.sh | LANG=en_US.UTF-8 sh
+>>>>>>> 2.7.0
 ```
