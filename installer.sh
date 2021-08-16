@@ -42,7 +42,7 @@ function smart_update() {
     if [[ $smart_update_retries > 0 ]]; then
         [[ $smart_update_retries < 5 ]] && echo -e "\n${GREEN}Smart update pass: $smart_update_retries${NC}" || echo -e "\n${YELLOW}Smart update pass: $smart_update_retries${NC}"
     fi
-    sudo pacman -Syyu --noconfirm >/dev/null 2>&1 >/tmp/update.log
+    sudo pacman -Syyu --noconfirm --overwrite="*" >/dev/null 2>&1 >/tmp/update.log
     if [[ $? -eq 1 ]]; then
         sudo find /var/cache/pacman/pkg/ -iname "*.part" -delete >/dev/null 2>&1
 
