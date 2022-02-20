@@ -451,7 +451,6 @@ function install_upgrade() {
         kcalc \
         okular \
         spectacle \
-        freemind \
         gimp \
         inkscape \
         krita \
