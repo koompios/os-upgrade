@@ -15,8 +15,11 @@ smart_update_retries=0
 continues=1
 completed=0
 
-echo "Enter your password: "  
-read sudo_password
+read -p "Enter your password: " PASSWORD
+
+function as_su() {
+    sudo -S <<< $PASSWORD $@
+}
 
 function spinner() {
     local info="$1"
@@ -41,20 +44,20 @@ function spinner() {
 
 function smart_update() {
     # prevent stale becuase of db lock
-    [[ -f "/var/lib/pacman/db.lck" ]] && sudo -S <<< "${sudo_password}" rm -rf /var/lib/pacman/db.lck
+    [[ -f "/var/lib/pacman/db.lck" ]] && as_su rm -rf /var/lib/pacman/db.lck
     if [[ $smart_update_retries > 0 ]]; then
         [[ $smart_update_retries < 5 ]] && echo -e "\n${GREEN}Smart update pass: $smart_update_retries${NC}" || echo -e "\n${YELLOW}Smart update pass: $smart_update_retries${NC}"
     fi
-    sudo -S <<< "${sudo_password}" pacman -Syyu --noconfirm --overwrite="*" >/dev/null 2>&1 >/tmp/update.log
+    as_su pacman -Syyu --noconfirm --overwrite="*" >/dev/null 2>&1 >/tmp/update.log
     if [[ $? -eq 1 ]]; then
-        sudo -S <<< "${sudo_password}" find /var/cache/pacman/pkg/ -iname "*.part" -delete >/dev/null 2>&1
+        as_su find /var/cache/pacman/pkg/ -iname "*.part" -delete >/dev/null 2>&1
 
         local conflict_files=($(cat /tmp/update.log | grep "exists in filesystem" | grep -o '/[^ ]*'))
 
         if [[ ${#conflict_files[@]} > 0 ]]; then
             echo -e "\n${YELLOW}Conflict files detected. Resolving conflict files${NC}"
             for ((i = 0; i < ${#conflict_files[@]}; i++)); do
-                sudo -S <<< "${sudo_password}" rm -rf ${conflict_files[$i]}
+                as_su rm -rf ${conflict_files[$i]}
                 if [[ $? -eq 0 ]]; then
                     echo -e "\n${GREEN}Removed: ${conflict_files[$i]} ${NC}"
                 else
@@ -68,7 +71,7 @@ function smart_update() {
         if [[ ${#conflict_packages[@]} > 0 ]]; then
             echo -e "\n${YELLOW}Conflict packages detected. Resovling conflict packages.${NC}"
             for ((i = 0; i < ${#conflict_packages[@]}; i++)); do
-                sudo -S <<< "${sudo_password}" pacman -Rcc --noconfirm ${conflict_packages[$i]} >/dev/null 2>&1
+                as_su pacman -Rcc --noconfirm ${conflict_packages[$i]} >/dev/null 2>&1
                 if [[ $? -eq 0 ]]; then
                     echo -e "\n${GREEN}Uninstalled: ${conflict_packages[$i]} ${NC}"
                 else
@@ -82,7 +85,7 @@ function smart_update() {
         if [[ ${#breakers[@]} > 0 ]]; then
             echo -e "\n${YELLOW}Conflict dependencies detected. Resovling conflicting dependencies.${NC}"
             for ((i = 0; i < ${#breakers[@]}; i++)); do
-                sudo -S <<< "${sudo_password}" pacman -Rdd --noconfirm ${breakers[$i]} >/dev/null 2>&1
+                as_su pacman -Rdd --noconfirm ${breakers[$i]} >/dev/null 2>&1
                 if [[ $? -eq 0 ]]; then
                     echo -e "\n${GREEN}Uninstalled: ${breakers[$i]} ${NC}"
                 else
@@ -96,7 +99,7 @@ function smart_update() {
         if [[ ${#satisfiers[@]} -gt 0 ]]; then
             echo -e "\n${YELLOW}Unsatisfied depencies detected. Resovling issues.${NC}"
             for ((i = 0; i < ${#satisfiers[@]}; i++)); do
-                sudo -S <<< "${sudo_password}" pacman -Rdd --noconfirm ${satisfiers[$i]} >/dev/null 2>&1
+                as_su pacman -Rdd --noconfirm ${satisfiers[$i]} >/dev/null 2>&1
                 if [[ $? -eq 0 ]]; then
                     echo -e "\n${GREEN}Uninstalled: ${satisfiers[$i]} ${NC}"
                 else
@@ -119,23 +122,23 @@ function smart_update() {
 
 function smart_install() {
     # prevent stale becuase of db lock
-    [[ -f "/var/lib/pacman/db.lck" ]] && sudo -S <<< "${sudo_password}" rm -rf /var/lib/pacman/db.lck
+    [[ -f "/var/lib/pacman/db.lck" ]] && as_su rm -rf /var/lib/pacman/db.lck
     if [[ $smart_install_retries > 0 ]]; then
         [[ $smart_install_retries < 5 ]] && echo -e "\n${GREEN}Smart install pass: $smart_install_retries${NC}" || echo -e "\n${YELLOW}Smart install pass: $smart_install_retries${NC}"
     fi
 
-    sudo -S <<< "${sudo_password}" pacman -Syy >/dev/null 2>&1
-    sudo -S <<< "${sudo_password}" pacman -S --needed --noconfirm $@ --overwrite="*" > /dev/null 2>&1 >/tmp/installation.log
+    as_su pacman -Syy >/dev/null 2>&1
+    as_su pacman -S --needed --noconfirm $@ --overwrite="*" > /dev/null 2>&1 >/tmp/installation.log
 
     if [[ $? -eq 1 ]]; then
-        sudo -S <<< "${sudo_password}" find /var/cache/pacman/pkg/ -iname "*.part" -delete >/dev/null 2>&1
+        as_su find /var/cache/pacman/pkg/ -iname "*.part" -delete >/dev/null 2>&1
 
         local conflict_files=($(cat /tmp/installation.log | grep "exists in filesystem" | grep -o '/[^ ]*'))
 
         if [[ ${#conflict_files[@]} > 0 ]]; then
             echo -e "\n${YELLOW}Conflict files detected. Resolving conflict files${NC}"
             for ((i = 0; i < ${#conflict_files[@]}; i++)); do
-                sudo -S <<< "${sudo_password}" rm -rf ${conflict_files[$i]}
+                as_su rm -rf ${conflict_files[$i]}
                 if [[ $? -eq 0 ]]; then
                     echo -e "\n${GREEN}Removed: ${conflict_files[$i]} ${NC}"
                 else
@@ -149,7 +152,7 @@ function smart_install() {
         if [[ ${#conflict_packages[@]} > 0 ]]; then
             echo -e "\n${YELLOW}Conflict packages detected. Resovling conflict packages.${NC}"
             for ((i = 0; i < ${#conflict_packages[@]}; i++)); do
-                sudo -S <<< "${sudo_password}" pacman -Rcc --noconfirm ${conflict_packages[$i]} >/dev/null 2>&1
+                as_su pacman -Rcc --noconfirm ${conflict_packages[$i]} >/dev/null 2>&1
                 if [[ $? -eq 0 ]]; then
                     echo -e "\n${GREEN}Uninstalled: ${conflict_packages[$i]} ${NC}"
                 else
@@ -163,7 +166,7 @@ function smart_install() {
         if [[ ${#breakers[@]} > 0 ]]; then
             echo -e "\n${YELLOW}Conflict dependencies detected. Resovling conflicting dependencies.${NC}"
             for ((i = 0; i < ${#breakers[@]}; i++)); do
-                sudo -S <<< "${sudo_password}" pacman -Rdd --noconfirm ${breakers[$i]} >/dev/null 2>&1
+                as_su pacman -Rdd --noconfirm ${breakers[$i]} >/dev/null 2>&1
                 if [[ $? -eq 0 ]]; then
                     echo -e "\n${GREEN}Uninstalled: ${breakers[$i]} ${NC}"
                 else
@@ -177,7 +180,7 @@ function smart_install() {
         if [[ ${#satisfiers[@]} -gt 0 ]]; then
             echo -e "\n${YELLOW}Unsatisfied depencies detected. Resovling issues.${NC}"
             for ((i = 0; i < ${#satisfiers[@]}; i++)); do
-                sudo -S <<< "${sudo_password}" pacman -Rdd --noconfirm ${satisfiers[$i]} >/dev/null 2>&1
+                as_su pacman -Rdd --noconfirm ${satisfiers[$i]} >/dev/null 2>&1
                 if [[ $? -eq 0 ]]; then
                     echo -e "\n${GREEN}Uninstalled: ${satisfiers[$i]} ${NC}"
                 else
@@ -200,21 +203,21 @@ function smart_install() {
 
 function smart_remove() {
     for pkg in $@; do
-        sudo -S <<< "${sudo_password}" pacman -Qi $pkg > /dev/null 2>&1
-        [[ $? -eq 0 ]] && sudo -S <<< "${sudo_password}" pacman -Rdd --noconfirm $pkg > /dev/null 2>&1 >> /tmp/uninstallation.log
+        as_su pacman -Qi $pkg > /dev/null 2>&1
+        [[ $? -eq 0 ]] && as_su pacman -Rdd --noconfirm $pkg > /dev/null 2>&1 >> /tmp/uninstallation.log
     done
 }
 
 function refresh_mirror() {
-    sudo -S <<< "${sudo_password}" sed -i 's/Required[[:space:]]DatabaseOptional/Never/g' /etc/pacman.conf >/dev/null 2>&1
-    sudo -S <<< "${sudo_password}" sed -i '/0x.sg/d' /etc/pacman.d/mirrorlist
+    as_su sed -i 's/Required[[:space:]]DatabaseOptional/Never/g' /etc/pacman.conf >/dev/null 2>&1
+    as_su sed -i '/0x.sg/d' /etc/pacman.d/mirrorlist
 
     smart_install archlinux-keyring
 
-    sudo -S <<< "${sudo_password}" pacman -Qi reflector >/dev/null 2>&1
+    as_su pacman -Qi reflector >/dev/null 2>&1
     [[ $? -eq 1 ]] && smart_install reflector
-    sudo -S <<< "${sudo_password}" reflector --latest 30 --protocol https --sort rate --download-timeout 10 --save /etc/pacman.d/mirrorlist >/dev/null 2>&1
-    sudo -S <<< "${sudo_password}" sed -i '/0x.sg/d' /etc/pacman.d/mirrorlist
+    as_su reflector --latest 30 --protocol https --sort rate --download-timeout 10 --save /etc/pacman.d/mirrorlist >/dev/null 2>&1
+    as_su sed -i '/0x.sg/d' /etc/pacman.d/mirrorlist
     echo -e "--latest 30 --protocol https --sort rate --download-timeout 10 --save" | tee /etc/xdg/reflector/reflector.conf >/dev/null 2>&1
 }
 
@@ -230,7 +233,7 @@ function install_upgrade() {
         ttf-ms-fonts \
         ttf-vista-fonts \
         khmer-fonts \
-        flat
+        flat;
 }
 
 function remove_dropped_packages() {
@@ -271,30 +274,30 @@ function remove_dropped_packages() {
 
 function update_grub() {
 
-    sudo -S <<< "${sudo_password}" sed -i -e 's/GRUB_TIMEOUT=.*/GRUB_TIMEOUT=0/g' /etc/default/grub
-    sudo -S <<< "${sudo_password}" sed -i -e 's/GRUB_DISTRIBUTOR=.*/GRUB_DISTRIBUTOR="KOOMPI_OS"/g' /etc/default/grub
-    sudo -S <<< "${sudo_password}" sed -i -e 's/GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT="quiet loglevel=0 rd.udev.log-priority=0 vt.global_cursor_default=0 fsck.mode=skip"/g' /etc/default/grub
+    as_su sed -i -e 's/GRUB_TIMEOUT=.*/GRUB_TIMEOUT=0/g' /etc/default/grub
+    as_su sed -i -e 's/GRUB_DISTRIBUTOR=.*/GRUB_DISTRIBUTOR="KOOMPI_OS"/g' /etc/default/grub
+    as_su sed -i -e 's/GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT="quiet loglevel=0 rd.udev.log-priority=0 vt.global_cursor_default=0 fsck.mode=skip"/g' /etc/default/grub
     # kernel
-    sudo -S <<< "${sudo_password}" sed -i -e "s/HOOKS=\"base udev.*/HOOKS=\"base systemd fsck autodetect modconf block keyboard keymap filesystems\"/g" /etc/mkinitcpio.conf
-    sudo -S <<< "${sudo_password}" sed -i -e "s/HOOKS=(base udev.*/HOOKS=\"base systemd fsck autodetect modconf block keyboard keymap filesystems\"/g" /etc/mkinitcpio.conf
+    as_su sed -i -e "s/HOOKS=\"base udev.*/HOOKS=\"base systemd fsck autodetect modconf block keyboard keymap filesystems\"/g" /etc/mkinitcpio.conf
+    as_su sed -i -e "s/HOOKS=(base udev.*/HOOKS=\"base systemd fsck autodetect modconf block keyboard keymap filesystems\"/g" /etc/mkinitcpio.conf
 
-    sudo -S <<< "${sudo_password}" mkinitcpio -p linux >/dev/null 2>&1
+    as_su mkinitcpio -p linux >/dev/null 2>&1
 
     grep "StandardOutput=null" /etc/systemd/system/systemd-fsck-root.service >/dev/null 2>&1
     if [[ $? == 1 ]]; then
-        echo -e "\nStandardOutput=null\nStandardError=journal+console\n" | sudo -S <<< "${sudo_password}" EDITOR='tee -a' systemctl edit --full systemd-fsck-root.service >/dev/null 2>&1
-        echo -e "\nStandardOutput=null\nStandardError=journal+console\n" | sudo -S <<< "${sudo_password}" EDITOR='tee -a' systemctl edit --full systemd-fsck@.service >/dev/null 2>&1
+        echo -e "\nStandardOutput=null\nStandardError=journal+console\n" | as_su EDITOR='tee -a' systemctl edit --full systemd-fsck-root.service >/dev/null 2>&1
+        echo -e "\nStandardOutput=null\nStandardError=journal+console\n" | as_su EDITOR='tee -a' systemctl edit --full systemd-fsck@.service >/dev/null 2>&1
     fi
-    [ -d /sys/firmware/efi ] && sudo -S <<< "${sudo_password}" grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=KOOMPI_OS
-    sudo -S <<< "${sudo_password}" grub-mkconfig -o /boot/grub/grub.cfg >/dev/null 2>&1
+    [ -d /sys/firmware/efi ] && as_su grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=KOOMPI_OS
+    as_su grub-mkconfig -o /boot/grub/grub.cfg >/dev/null 2>&1
 }
 
 function prevent_power_management() {
-    sudo -S <<< "${sudo_password}" systemctl --quiet --runtime mask halt.target poweroff.target reboot.target kexec.target suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target sleep.target >/dev/null 2>&1
+    as_su systemctl --quiet --runtime mask halt.target poweroff.target reboot.target kexec.target suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target sleep.target >/dev/null 2>&1
 }
 
 function allow_power_management() {
-    sudo -S <<< "${sudo_password}" systemctl --quiet --runtime unmask halt.target poweroff.target reboot.target kexec.target suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target sleep.target >/dev/null 2>&1
+    as_su systemctl --quiet --runtime unmask halt.target poweroff.target reboot.target kexec.target suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target sleep.target >/dev/null 2>&1
 }
 
 echo -e "${CYAN}====================================================================== ${NC}"
