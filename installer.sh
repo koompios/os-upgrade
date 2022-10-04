@@ -237,6 +237,7 @@ function install_upgrade() {
 }
 
 function remove_dropped_packages() {
+    smart_install wireplumber
     smart_remove \
         pipewire-media-session \
         koompi-linux \
@@ -275,20 +276,6 @@ function remove_dropped_packages() {
 
 function update_grub() {
 
-    as_su sed -i -e 's/GRUB_TIMEOUT=.*/GRUB_TIMEOUT=0/g' /etc/default/grub
-    as_su sed -i -e 's/GRUB_DISTRIBUTOR=.*/GRUB_DISTRIBUTOR="KOOMPI_OS"/g' /etc/default/grub
-    as_su sed -i -e 's/GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT="quiet loglevel=0 rd.udev.log-priority=0 vt.global_cursor_default=0 fsck.mode=skip"/g' /etc/default/grub
-    # kernel
-    as_su sed -i -e "s/HOOKS=\"base udev.*/HOOKS=\"base systemd fsck autodetect modconf block keyboard keymap filesystems\"/g" /etc/mkinitcpio.conf
-    as_su sed -i -e "s/HOOKS=(base udev.*/HOOKS=\"base systemd fsck autodetect modconf block keyboard keymap filesystems\"/g" /etc/mkinitcpio.conf
-
-    as_su mkinitcpio -p linux >/dev/null 2>&1
-
-    grep "StandardOutput=null" /etc/systemd/system/systemd-fsck-root.service >/dev/null 2>&1
-    if [[ $? == 1 ]]; then
-        echo -e "\nStandardOutput=null\nStandardError=journal+console\n" | as_su EDITOR='tee -a' systemctl edit --full systemd-fsck-root.service >/dev/null 2>&1
-        echo -e "\nStandardOutput=null\nStandardError=journal+console\n" | as_su EDITOR='tee -a' systemctl edit --full systemd-fsck@.service >/dev/null 2>&1
-    fi
     [ -d /sys/firmware/efi ] && as_su grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=KOOMPI_OS
     as_su grub-mkconfig -o /boot/grub/grub.cfg >/dev/null 2>&1
 }
