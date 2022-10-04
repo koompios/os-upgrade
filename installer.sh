@@ -71,7 +71,7 @@ function smart_update() {
         if [[ ${#conflict_packages[@]} > 0 ]]; then
             echo -e "\n${YELLOW}Conflict packages detected. Resovling conflict packages.${NC}"
             for ((i = 0; i < ${#conflict_packages[@]}; i++)); do
-                as_su pacman -Rcc --noconfirm ${conflict_packages[$i]} >/dev/null 2>&1
+                as_su pacman -Rdd --noconfirm ${conflict_packages[$i]} >/dev/null 2>&1
                 if [[ $? -eq 0 ]]; then
                     echo -e "\n${GREEN}Uninstalled: ${conflict_packages[$i]} ${NC}"
                 else
@@ -152,7 +152,7 @@ function smart_install() {
         if [[ ${#conflict_packages[@]} > 0 ]]; then
             echo -e "\n${YELLOW}Conflict packages detected. Resovling conflict packages.${NC}"
             for ((i = 0; i < ${#conflict_packages[@]}; i++)); do
-                as_su pacman -Rcc --noconfirm ${conflict_packages[$i]} >/dev/null 2>&1
+                as_su pacman -Rdd --noconfirm ${conflict_packages[$i]} >/dev/null 2>&1
                 if [[ $? -eq 0 ]]; then
                     echo -e "\n${GREEN}Uninstalled: ${conflict_packages[$i]} ${NC}"
                 else
@@ -218,7 +218,7 @@ function refresh_mirror() {
     [[ $? -eq 1 ]] && smart_install reflector
     as_su reflector --latest 30 --protocol https --sort rate --download-timeout 10 --save /etc/pacman.d/mirrorlist >/dev/null 2>&1
     as_su sed -i '/0x.sg/d' /etc/pacman.d/mirrorlist
-    echo -e "--latest 30 --protocol https --sort rate --download-timeout 10 --save" | tee /etc/xdg/reflector/reflector.conf >/dev/null 2>&1
+    echo -e "--latest 20 --protocol https --sort rate --download-timeout 10 --save" | tee /etc/xdg/reflector/reflector.conf >/dev/null 2>&1
 }
 
 function install_upgrade() {
@@ -233,11 +233,12 @@ function install_upgrade() {
         ttf-ms-fonts \
         ttf-vista-fonts \
         khmer-fonts \
-        flat;
+        wireplumber;
 }
 
 function remove_dropped_packages() {
     smart_remove \
+        pipewire-media-session \
         koompi-linux \
         koompi-linux-headers \
         koompi-linux-docs \
