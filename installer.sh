@@ -223,7 +223,7 @@ function refresh_mirror() {
 
     as_su pacman -Qi reflector >/dev/null 2>&1
     [[ $? -eq 1 ]] && smart_install reflector
-    as_su reflector --latest 30 --protocol https --sort rate --download-timeout 10 --save /etc/pacman.d/mirrorlist >/dev/null 2>&1
+    as_su reflector --latest 20 --protocol https --sort rate --download-timeout 10 --save /etc/pacman.d/mirrorlist >/dev/null 2>&1
     as_su sed -i '/0x.sg/d' /etc/pacman.d/mirrorlist
     echo -e "--latest 20 --protocol https --sort rate --download-timeout 10 --save" | tee /etc/xdg/reflector/reflector.conf >/dev/null 2>&1
 }
@@ -281,8 +281,9 @@ function remove_dropped_packages() {
         pulseaudio-bluetooth;
 }
 
-function update_grub() {
 
+
+function update_grub() {
     [ -d /sys/firmware/efi ] && as_su grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=KOOMPI_OS
     as_su grub-mkconfig -o /boot/grub/grub.cfg >/dev/null 2>&1
 }
