@@ -15,8 +15,23 @@ smart_update_retries=0
 continues=1
 completed=0
 
-read -p "Enter your password: " PASSWORD
-sleep 2s && clear;
+PASSWORD="";
+
+function checkpw() {
+    IFS= read -p "Enter your password: " PASSWD
+    sudo -k
+    if sudo -lS <<< $PASSWD &> /dev/null;
+    then
+        PASSWORD=$PASSWD
+        clear;
+    else 
+        faillock --user $USER --reset
+        echo 'Invalid password. Try again!'
+        checkpw
+    fi
+}
+
+checkpw
 
 function as_su() {
     sudo -S <<< $PASSWORD $@
