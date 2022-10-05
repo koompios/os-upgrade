@@ -284,7 +284,7 @@ function remove_dropped_packages() {
 
 
 function update_grub() {
-    [ -d /sys/firmware/efi ] && as_su grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=KOOMPI_OS
+    [ -d /sys/firmware/efi ] && as_su grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=KOOMPI_OS >/dev/null 2>&1
     as_su grub-mkconfig -o /boot/grub/grub.cfg >/dev/null 2>&1
 }
 
