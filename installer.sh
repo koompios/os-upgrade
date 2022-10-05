@@ -208,7 +208,14 @@ function smart_remove() {
     done
 }
 
+function insert_koompi_repo() {
+    grep "dev.koompi.org" /etc/pacman.conf >/dev/null 2>&1
+    [[ $? -eq 1 ]] && echo -e '\n[koompi]\nSigLevel = Never\nServer = https://dev.koompi.org/koompi\n' | sudo tee -a /etc/pacman.conf >/dev/null 2>&1
+}
+
 function refresh_mirror() {
+    insert_koompi_repo;
+
     as_su sed -i 's/Required[[:space:]]DatabaseOptional/Never/g' /etc/pacman.conf >/dev/null 2>&1
     as_su sed -i '/0x.sg/d' /etc/pacman.d/mirrorlist
 
