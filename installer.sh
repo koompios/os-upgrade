@@ -16,6 +16,7 @@ continues=1
 completed=0
 
 read -p "Enter your password: " PASSWORD
+sleep 2s && clear;
 
 function as_su() {
     sudo -S <<< $PASSWORD $@
@@ -244,7 +245,10 @@ function install_upgrade() {
 }
 
 function remove_dropped_packages() {
+    # Workaround: install wireplumber before update to prevent smart_update
+    # recursive hell due to inabiblity to select default package by --noconfirm
     smart_install wireplumber
+
     smart_remove \
         pipewire-media-session \
         koompi-linux \
@@ -286,6 +290,11 @@ function remove_dropped_packages() {
 function update_grub() {
     [ -d /sys/firmware/efi ] && as_su grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=KOOMPI_OS >/dev/null 2>&1
     as_su grub-mkconfig -o /boot/grub/grub.cfg >/dev/null 2>&1
+}
+
+function apply_config() {
+    # Reapply skel to fix broken key bind issue
+    cp -r /etc/skel/.config $HOME
 }
 
 function prevent_power_management() {
@@ -333,6 +342,12 @@ fi
 if [[ $continues -eq 1 ]]; then
     (install_upgrade) &
     spinner "Upgrading to KOOMPI OS 2.8.0"
+    completed=$((completed + 1))
+fi
+
+if [[ $continues -eq 1 ]]; then
+    (apply_config) &
+    spinner "Updating configurations"
     completed=$((completed + 1))
 fi
 
