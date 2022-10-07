@@ -256,7 +256,9 @@ function install_upgrade() {
         ttf-ms-fonts \
         ttf-vista-fonts \
         khmer-fonts \
-        wireplumber;
+        wireplumber \
+        libinput \
+        xf86-input-libinput;
 }
 
 function remove_dropped_packages() {
@@ -300,10 +302,20 @@ function remove_dropped_packages() {
         pulseaudio-bluetooth;
 }
 
+function clean_efi() {
+    boot=($(lsblk --list --fs | grep FAT32))
+    boot_drive=/dev/${boot[0]}
 
+    as_su umount $boot_drive >/dev/null 2>&1
+    as_su mkfs.fat -F32 $boot_drive >/dev/null 2>&1
+    as_su systemctl daemon-reload >/dev/null 2>&1
+    as_su mount $boot_drive /boot/efi >/dev/null 2>&1
+    as_su grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=KOOMPI_OS >/dev/null 2>&1
+    as_su bash -c 'genfstab -U -p / > /etc/fstab' >/dev/null 2>&1
+}
 
 function update_grub() {
-    [ -d /sys/firmware/efi ] && as_su grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=KOOMPI_OS >/dev/null 2>&1
+    [ -d /sys/firmware/efi ] && clean_efi
     as_su grub-mkconfig -o /boot/grub/grub.cfg >/dev/null 2>&1
 }
 
