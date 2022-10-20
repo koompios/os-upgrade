@@ -225,7 +225,7 @@ function smart_remove() {
 function insert_koompi_repo() {
     grep "dev.koompi.org" /etc/pacman.conf >/dev/null 2>&1
     [[ $? -eq 1 ]] && echo -e '\n[koompi]\nSigLevel = Never\nServer = https://dev.koompi.org/koompi\n' | sudo tee -a /etc/pacman.conf >/dev/null 2>&1
-    
+
     grep "ParallelDownloads = 5" /etc/pacman.conf >/dev/null 2>&1
     [[ $? -eq 1 ]] && sed "$(grep -n "\[options\]" /etc/pacman.conf | awk -F':' '{printf $1}') aParallelDownloads = 5" /etc/pacman.conf | sudo tee /etc/pacman.conf >/dev/null 2>&1
 }
@@ -315,14 +315,11 @@ function remove_dropped_packages() {
         pulseaudio-alsa \
         pulseaudio-jack \
         pulseaudio-bluetooth \
-        ## Remove to support for old E11 
         rtl8723bu-dkms-koompi \ 
         rtl8723bu-dkms-linux \  
         rtl8723bu-dkms-zen \     
         rtl8723bu-git-dkms \
-        ## No longer exist    
         freemind \
-        ## Remove Calamares
         koompi-calamares \
         calamares;                 
 }
