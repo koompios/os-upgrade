@@ -31,8 +31,6 @@ function checkpw() {
     fi
 }
 
-checkpw
-
 function as_su() {
     sudo -S <<< $PASSWORD $@
 }
@@ -227,6 +225,9 @@ function smart_remove() {
 function insert_koompi_repo() {
     grep "dev.koompi.org" /etc/pacman.conf >/dev/null 2>&1
     [[ $? -eq 1 ]] && echo -e '\n[koompi]\nSigLevel = Never\nServer = https://dev.koompi.org/koompi\n' | sudo tee -a /etc/pacman.conf >/dev/null 2>&1
+    
+    grep "ParallelDownloads = 5" /etc/pacman.conf >/dev/null 2>&1
+    [[ $? -eq 1 ]] && sed "$(grep -n "\[options\]" /etc/pacman.conf | awk -F':' '{printf $1}') aParallelDownloads = 5" /etc/pacman.conf | sudo tee /etc/pacman.conf >/dev/null 2>&1
 }
 
 function refresh_mirror() {
@@ -250,25 +251,35 @@ function install_upgrade() {
         linux-headers \
         linux-firmware \
         acpi \
+        fcitx5-im \
+        koompi-skel \
+        networkmanager-iwd \
+        realtime-privileges \
+        fcitx5-chinese-addons \
         acpi_call \
+        khmer-dictionary \
         dkms \
         grub \
         ttf-ms-fonts \
         ttf-vista-fonts \
+        ttf-wps-fonts \
         khmer-fonts \
         wireplumber \
         libinput \
-        xf86-input-libinput;
+        xf86-input-libinput \
+        ## For KOOMPI Mini Wifi Driver
+        rtw88-dkms-git;
 
     # release config
-    echo -e "[General]\nName=KOOMPI OS\nPRETTY_NAME=KOOMPI OS\nLogoPath=/usr/share/icons/koompi/koompi.svg\nWebsite=http://www.koompi.com\nVersion=2.8.0\nVariant=Rolling Release\nUseOSReleaseVersion=false" | sudo tee /etc/xdg/kcm-about-distrorc >/dev/null 2>&1
+    echo -e "[General]\nName=KOOMPI OS\nPRETTY_NAME=KOOMPI OS\nLogoPath=/usr/share/icons/koompi/koompi.svg\nWebsite=http://www.koompi.com\nVersion=2.8.1\nVariant=Rolling Release\nUseOSReleaseVersion=false" | sudo tee /etc/xdg/kcm-about-distrorc >/dev/null 2>&1
     echo -e 'NAME="KOOMPI OS"\nPRETTY_NAME="KOOMPI OS"\nID=koompi\nBUILD_ID=rolling\nANSI_COLOR="38;2;23;147;209"\nHOME_URL="https://www.koompi.com/"\nDOCUMENTATION_URL="https://wiki.koompi.org/"\nSUPPORT_URL="https://t.me/koompi"\nBUG_REPORT_URL="https://t.me/koompi"\nLOGO=/usr/share/icons/koompi/koompi.svg' | sudo tee /etc/os-release >/dev/null 2>&1
 }
 
 function remove_dropped_packages() {
     # Workaround: install wireplumber before update to prevent smart_update
     # recursive hell due to inabiblity to select default package by --noconfirm
-    smart_install wireplumber
+    # UPDATE: Added CALAMARES due to old version install it without pacman and leave leftover file without install
+    smart_install wireplumber koompi-calamares
 
     smart_remove \
         pipewire-media-session \
@@ -303,7 +314,17 @@ function remove_dropped_packages() {
         pulseaudio \
         pulseaudio-alsa \
         pulseaudio-jack \
-        pulseaudio-bluetooth;
+        pulseaudio-bluetooth \
+        ## Remove to support for old E11 
+        rtl8723bu-dkms-koompi \ 
+        rtl8723bu-dkms-linux \  
+        rtl8723bu-dkms-zen \     
+        rtl8723bu-git-dkms \
+        ## No longer exist    
+        freemind \
+        ## Remove Calamares
+        koompi-calamares \
+        calamares;                 
 }
 
 function update_grub() {
@@ -316,7 +337,10 @@ function update_grub() {
 
 function apply_config() {
     # Reapply skel to fix broken key bind issue
-    cp -r /etc/skel/.config $HOME
+    # UPDATE: Added bashrc and bash profile to fix some fcitx5 issue
+    as_su cp -r /etc/skel/{.config,.bashrc,.bash_profile} ${HOME}
+    as_su chown ${USER}:users -R ${HOME{}
+    as_su usermod -aG realtime ${USER}
 }
 
 function prevent_power_management() {
@@ -327,6 +351,9 @@ function allow_power_management() {
     as_su systemctl --quiet --runtime unmask halt.target poweroff.target reboot.target kexec.target suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target sleep.target >/dev/null 2>&1
 }
 
+checkpw
+prevent_power_management
+
 echo -e "${CYAN}====================================================================== ${NC}"
 echo -e "${CYAN} ██╗  ██╗ ██████╗  ██████╗ ███╗   ███╗██████╗ ██╗     ██████╗ ███████╗ ${NC}"
 echo -e "${CYAN} ██║ ██╔╝██╔═══██╗██╔═══██╗████╗ ████║██╔══██╗██║    ██╔═══██╗██╔════╝ ${NC}"
@@ -334,14 +361,9 @@ echo -e "${CYAN} █████╔╝ ██║   ██║██║   ██�
 echo -e "${CYAN} ██╔═██╗ ██║   ██║██║   ██║██║╚██╔╝██║██╔═══╝ ██║    ██║   ██║╚════██║ ${NC}"
 echo -e "${CYAN} ██║  ██╗╚██████╔╝╚██████╔╝██║ ╚═╝ ██║██║     ██║    ╚██████╔╝███████║ ${NC}"
 echo -e "${CYAN} ╚═╝  ╚═╝ ╚═════╝  ╚═════╝ ╚═╝     ╚═╝╚═╝     ╚═╝     ╚═════╝ ╚══════╝ ${NC}"
-echo -e "${CYAN}====================================================================== ${NC}"
-echo -e ""
-echo -e "Upgrade to version 2.8.0"
-echo -e "Initialzing generation upgrade"
-echo -e ""
-prevent_power_management
-echo -e "${RED}NOTE: During update, do not turn off your computer.${NC}"
-echo -e ""
+echo -e "${CYAN}====================================================================== ${NC}\n"
+echo -e "Upgrade to version 2.8.1\nInitialzing generation upgrade\n"
+echo -e "${RED}NOTE: During update, do not turn off your computer.${NC}\n"
 
 if [[ $continues -eq 1 ]]; then
     (refresh_mirror) &
@@ -363,7 +385,7 @@ fi
 
 if [[ $continues -eq 1 ]]; then
     (install_upgrade) &
-    spinner "Upgrading to KOOMPI OS 2.8.0"
+    spinner "Upgrading to KOOMPI OS 2.8.1"
     completed=$((completed + 1))
 fi
 
@@ -380,27 +402,21 @@ if [[ $continues -eq 1 ]]; then
 fi
 
 if [[ $continues -eq 1 ]]; then
-    echo -e ""
+
     allow_power_management
-    echo -e "${CYAN}====================================================================== ${NC}"
-    echo -e ""
-    echo -e "${GREEN}Upgraded to version 2.8.0${NC}"
-    echo -e "${YELLOW}Please restart your computer before continue using.${NC}"
-    echo -e ""
+
+    echo -e "\n${CYAN}====================================================================== ${NC}\n"
+    echo -e "${GREEN}Upgraded to version 2.8.1${NC}"
+    echo -e "${YELLOW}Please restart your computer before continue using.${NC}\n"
 else
-    echo -e ""
+
     allow_power_management
-    echo -e "${RED}====================================================================== ${NC}"
-    echo -e ""
+
+    echo -e "\n${RED}====================================================================== ${NC}\n"
     echo -e "${RED}Upgraded failed${NC}"
-    echo -e "${YELLOW}${completed} steps was completed"
-    echo -e "There was many attemps to solve the issue but still unable to automatically fix."
-    echo -e "${RED}Please run:${NC}"
-    echo -e ""
-    echo -e "${RED}sudo pacman -Syyu${NC}"
-    echo -e ""
-    echo -e "${RED}Then restart your computer${NC}"
-    echo -e ""
+    echo -e "\n${YELLOW}${completed} steps was completed"
+    echo -e "There was many attemps to solve the issue but still unable to automatically fix.\n"
+    echo -e "${RED}Please run:${NC}\n${RED}sudo pacman -Syyu${NC}\n\n${RED}Then restart your computer${NC}\n"
 fi
 
 # To set presentation mode
