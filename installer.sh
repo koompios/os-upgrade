@@ -267,7 +267,6 @@ function install_upgrade() {
         wireplumber \
         libinput \
         xf86-input-libinput \
-        ## For KOOMPI Mini Wifi Driver
         rtw88-dkms-git;
 
     # release config
