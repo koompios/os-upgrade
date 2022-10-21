@@ -398,17 +398,14 @@ if [[ $continues -eq 1 ]]; then
     completed=$((completed + 1))
 fi
 
+allow_power_management
+
 if [[ $continues -eq 1 ]]; then
-
-    allow_power_management
-
     echo -e "\n${CYAN}====================================================================== ${NC}\n"
     echo -e "${GREEN}Upgraded to version 2.8.1${NC}"
     echo -e "${YELLOW}Please restart your computer before continue using.${NC}\n"
+
 else
-
-    allow_power_management
-
     echo -e "\n${RED}====================================================================== ${NC}\n"
     echo -e "${RED}Upgraded failed${NC}"
     echo -e "\n${YELLOW}${completed} steps was completed"
