@@ -37,6 +37,7 @@ function as_su() {
 
 function spinner() {
     local info="$1"
+    local info_byte_count=$(echo $info | wc -c 2>/dev/null) || info_byte_count=32
     local pid=$!
     local delay=0.5
     local spinstr='|/-\'
@@ -46,7 +47,7 @@ function spinner() {
         local spinstr=$temp${spinstr%"$temp"}
         sleep $delay
         local reset="\b\b\b\b\b\b"
-        for ((i = 1; i <= $(echo $info | wc -c); i++)); do
+        for ((i = 1; i <= $info_byte_count; i++)); do
             reset+="\b"
         done
         printf $reset
@@ -334,7 +335,7 @@ function update_grub() {
 function apply_config() {
     # Reapply skel to fix broken key bind issue
     # UPDATE: Added bashrc and bash profile to fix some fcitx5 issue
-    as_su cp -r -T /etc/skel/{.config,.bashrc,.bash_profile} ${HOME}
+    as_su cp -r -T /etc/skel/ ${HOME}
     as_su chown ${USER}:users -R ${HOME}
     as_su usermod -aG realtime ${USER}
 }
