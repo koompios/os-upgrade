@@ -335,7 +335,7 @@ function apply_config() {
     # Reapply skel to fix broken key bind issue
     # UPDATE: Added bashrc and bash profile to fix some fcitx5 issue
     as_su cp -r /etc/skel/{.config,.bashrc,.bash_profile} ${HOME}
-    as_su chown ${USER}:users -R ${HOME{}
+    as_su chown ${USER}:users -R ${HOME}
     as_su usermod -aG realtime ${USER}
 }
 
