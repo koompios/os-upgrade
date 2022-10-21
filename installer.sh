@@ -45,7 +45,7 @@ function spinner() {
         local temp=${spinstr#?}
         printf "[${YELLOW}%c${NC}] $info" "$spinstr"
         local spinstr=$temp${spinstr%"$temp"}
-        sleep $delay
+        sleep $delay 2>/dev/null
         local reset="\b\b\b\b\b\b"
         for ((i = 1; i <= $info_byte_count; i++)); do
             reset+="\b"
