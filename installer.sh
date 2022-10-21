@@ -315,9 +315,9 @@ function remove_dropped_packages() {
         pulseaudio-alsa \
         pulseaudio-jack \
         pulseaudio-bluetooth \
-        rtl8723bu-dkms-koompi \ 
-        rtl8723bu-dkms-linux \  
-        rtl8723bu-dkms-zen \     
+        rtl8723bu-dkms-koompi \
+        rtl8723bu-dkms-linux \
+        rtl8723bu-dkms-zen \
         rtl8723bu-git-dkms \
         freemind \
         koompi-calamares \
