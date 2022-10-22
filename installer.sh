@@ -257,6 +257,7 @@ function install_upgrade() {
         networkmanager-iwd \
         realtime-privileges \
         fcitx5-chinese-addons \
+        ksysguard \
         acpi_call \
         khmer-dictionary \
         dkms \
