@@ -402,6 +402,9 @@ if [[ $continues -eq 1 ]]; then
     completed=$((completed + 1))
 fi
 
+## Clean up Pacman space
+as_su rm -rf ${HOME}/.cache /var/cache/pacman/pkg/* 
+
 allow_power_management
 
 if [[ $continues -eq 1 ]]; then
