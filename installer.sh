@@ -321,6 +321,9 @@ function remove_dropped_packages() {
         rtl8723bu-git-dkms \
         freemind \
         koompi-calamares \
+        ipw2100-fw \
+        ipw2200-fw  \
+        progsreiserfs \
         calamares;                 
 }
 
