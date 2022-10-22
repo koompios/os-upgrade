@@ -268,6 +268,7 @@ function install_upgrade() {
         wireplumber \
         libinput \
         xf86-input-libinput \
+        kcalc \
         rtw88-dkms-git;
 
     # release config
