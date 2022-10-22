@@ -379,7 +379,7 @@ fi
 
 if [[ $continues -eq 1 ]]; then
     (smart_update) &
-    spinner "Updating all installed applications"
+    spinner "Updating all installed applications" 2>/dev/null
     completed=$((completed + 1))
 fi
 
