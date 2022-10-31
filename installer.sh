@@ -263,6 +263,9 @@ function install_upgrade() {
         ttf-vista-fonts \
         ttf-wps-fonts \
         khmer-fonts \
+        pipewire \
+        pipewire-pulse \
+        pipewire-alsa \
         wireplumber \
         libinput \
         xf86-input-libinput \
