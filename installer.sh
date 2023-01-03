@@ -31,14 +31,13 @@ function checkpw() {
     fi
 }
 
-checkpw
-
 function as_su() {
     sudo -S <<< $PASSWORD $@
 }
 
 function spinner() {
     local info="$1"
+    local info_byte_count=$(echo $info | wc -c 2>/dev/null) || info_byte_count=32
     local pid=$!
     local delay=0.5
     local spinstr='|/-\'
@@ -46,9 +45,9 @@ function spinner() {
         local temp=${spinstr#?}
         printf "[${YELLOW}%c${NC}] $info" "$spinstr"
         local spinstr=$temp${spinstr%"$temp"}
-        sleep $delay
+        sleep $delay 2>/dev/null
         local reset="\b\b\b\b\b\b"
-        for ((i = 1; i <= $(echo $info | wc -c); i++)); do
+        for ((i = 1; i <= $info_byte_count; i++)); do
             reset+="\b"
         done
         printf $reset
@@ -250,25 +249,39 @@ function install_upgrade() {
         linux-headers \
         linux-firmware \
         acpi \
+        fcitx5-im \
+        koompi-skel \
+        networkmanager-iwd \
+        realtime-privileges \
+        fcitx5-chinese-addons \
+        ksysguard \
         acpi_call \
+        khmer-dictionary \
         dkms \
         grub \
         ttf-ms-fonts \
         ttf-vista-fonts \
+        ttf-wps-fonts \
         khmer-fonts \
+        pipewire \
+        pipewire-pulse \
+        pipewire-alsa \
         wireplumber \
         libinput \
-        xf86-input-libinput;
+        xf86-input-libinput \
+        kcalc \
+        rtw88-dkms-git;
 
     # release config
-    echo -e "[General]\nName=KOOMPI OS\nPRETTY_NAME=KOOMPI OS\nLogoPath=/usr/share/icons/koompi/koompi.svg\nWebsite=http://www.koompi.com\nVersion=2.8.0\nVariant=Rolling Release\nUseOSReleaseVersion=false" | sudo tee /etc/xdg/kcm-about-distrorc >/dev/null 2>&1
+    echo -e "[General]\nName=KOOMPI OS\nPRETTY_NAME=KOOMPI OS\nLogoPath=/usr/share/icons/koompi/koompi.svg\nWebsite=http://www.koompi.com\nVersion=2.8.1\nVariant=Rolling Release\nUseOSReleaseVersion=false" | sudo tee /etc/xdg/kcm-about-distrorc >/dev/null 2>&1
     echo -e 'NAME="KOOMPI OS"\nPRETTY_NAME="KOOMPI OS"\nID=koompi\nBUILD_ID=rolling\nANSI_COLOR="38;2;23;147;209"\nHOME_URL="https://www.koompi.com/"\nDOCUMENTATION_URL="https://wiki.koompi.org/"\nSUPPORT_URL="https://t.me/koompi"\nBUG_REPORT_URL="https://t.me/koompi"\nLOGO=/usr/share/icons/koompi/koompi.svg' | sudo tee /etc/os-release >/dev/null 2>&1
 }
 
 function remove_dropped_packages() {
     # Workaround: install wireplumber before update to prevent smart_update
     # recursive hell due to inabiblity to select default package by --noconfirm
-    smart_install wireplumber
+    # UPDATE: Added CALAMARES due to old version install it without pacman and leave leftover file without install
+    smart_install wireplumber koompi-calamares
 
     smart_remove \
         pipewire-media-session \
@@ -303,20 +316,44 @@ function remove_dropped_packages() {
         pulseaudio \
         pulseaudio-alsa \
         pulseaudio-jack \
-        pulseaudio-bluetooth;
+        pulseaudio-bluetooth \
+        rtl8723bu-dkms-koompi \
+        rtl8723bu-dkms-linux \
+        rtl8723bu-dkms-zen \
+        rtl8723bu-git-dkms \
+        freemind \
+        koompi-calamares \
+        ipw2100-fw \
+        ipw2200-fw  \
+        progsreiserfs \
+        calamares;                 
 }
 
 function update_grub() {
-    as_su rm -rf /boot/efi/* /boot/grub/*
+    boot=($(lsblk --list --fs | grep FAT32))
+    boot_drive=/dev/${boot[0]}
+    old_boot_drive_uuid=$(lsblk -o uuid $boot_drive | grep -v UUID)
+
+    as_su umount $boot_drive
+    as_su mkfs.fat -F32 $boot_drive >/dev/null 2>&1
+    
+    as_su systemctl daemon-reload
+    as_su mount $boot_drive /boot/efi
+    new_boot_drive_uuid=$(lsblk -o uuid $boot_drive | grep -v UUID)
+    as_su sed -i "s/$old_boot_drive_uuid/$new_boot_drive_uuid/g" /etc/fstab
+
     smart_install grub;
     as_su mkinitcpio -P >/dev/null 2>&1
     as_su grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=KOOMPI_OS >/dev/null 2>&1
-    as_su grub-mkconfig -o /boot/grub/grub.cfg >/dev/null 2>&1
+    as_su grub-mkconfig -o /boot/grub/grub.cfg >/dev/null 2>&1 
 }
 
 function apply_config() {
     # Reapply skel to fix broken key bind issue
-    cp -r /etc/skel/.config $HOME
+    # UPDATE: Added bashrc and bash profile to fix some fcitx5 issue
+    as_su cp -r -T /etc/skel/ ${HOME}
+    as_su chown ${USER}:users -R ${HOME}
+    as_su usermod -aG realtime ${USER}
 }
 
 function prevent_power_management() {
@@ -327,6 +364,9 @@ function allow_power_management() {
     as_su systemctl --quiet --runtime unmask halt.target poweroff.target reboot.target kexec.target suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target sleep.target >/dev/null 2>&1
 }
 
+checkpw
+prevent_power_management
+
 echo -e "${CYAN}====================================================================== ${NC}"
 echo -e "${CYAN} ██╗  ██╗ ██████╗  ██████╗ ███╗   ███╗██████╗ ██╗     ██████╗ ███████╗ ${NC}"
 echo -e "${CYAN} ██║ ██╔╝██╔═══██╗██╔═══██╗████╗ ████║██╔══██╗██║    ██╔═══██╗██╔════╝ ${NC}"
@@ -334,14 +374,9 @@ echo -e "${CYAN} █████╔╝ ██║   ██║██║   ██�
 echo -e "${CYAN} ██╔═██╗ ██║   ██║██║   ██║██║╚██╔╝██║██╔═══╝ ██║    ██║   ██║╚════██║ ${NC}"
 echo -e "${CYAN} ██║  ██╗╚██████╔╝╚██████╔╝██║ ╚═╝ ██║██║     ██║    ╚██████╔╝███████║ ${NC}"
 echo -e "${CYAN} ╚═╝  ╚═╝ ╚═════╝  ╚═════╝ ╚═╝     ╚═╝╚═╝     ╚═╝     ╚═════╝ ╚══════╝ ${NC}"
-echo -e "${CYAN}====================================================================== ${NC}"
-echo -e ""
-echo -e "Upgrade to version 2.8.0"
-echo -e "Initialzing generation upgrade"
-echo -e ""
-prevent_power_management
-echo -e "${RED}NOTE: During update, do not turn off your computer.${NC}"
-echo -e ""
+echo -e "${CYAN}====================================================================== ${NC}\n"
+echo -e "Upgrade to version 2.8.1\nInitialzing generation upgrade\n"
+echo -e "${RED}NOTE: During update, do not turn off your computer.${NC}\n"
 
 if [[ $continues -eq 1 ]]; then
     (refresh_mirror) &
@@ -357,13 +392,13 @@ fi
 
 if [[ $continues -eq 1 ]]; then
     (smart_update) &
-    spinner "Updating all installed applications"
+    spinner "Updating all installed applications" 2>/dev/null
     completed=$((completed + 1))
 fi
 
 if [[ $continues -eq 1 ]]; then
     (install_upgrade) &
-    spinner "Upgrading to KOOMPI OS 2.8.0"
+    spinner "Upgrading to KOOMPI OS 2.8.1"
     completed=$((completed + 1))
 fi
 
@@ -379,28 +414,22 @@ if [[ $continues -eq 1 ]]; then
     completed=$((completed + 1))
 fi
 
+## Clean up Pacman space
+as_su rm -rf ${HOME}/.cache /var/cache/pacman/pkg/* 
+
+allow_power_management
+
 if [[ $continues -eq 1 ]]; then
-    echo -e ""
-    allow_power_management
-    echo -e "${CYAN}====================================================================== ${NC}"
-    echo -e ""
-    echo -e "${GREEN}Upgraded to version 2.8.0${NC}"
-    echo -e "${YELLOW}Please restart your computer before continue using.${NC}"
-    echo -e ""
+    echo -e "\n${CYAN}====================================================================== ${NC}\n"
+    echo -e "${GREEN}Upgraded to version 2.8.1${NC}"
+    echo -e "${YELLOW}Please restart your computer before continue using.${NC}\n"
+
 else
-    echo -e ""
-    allow_power_management
-    echo -e "${RED}====================================================================== ${NC}"
-    echo -e ""
+    echo -e "\n${RED}====================================================================== ${NC}\n"
     echo -e "${RED}Upgraded failed${NC}"
-    echo -e "${YELLOW}${completed} steps was completed"
-    echo -e "There was many attemps to solve the issue but still unable to automatically fix."
-    echo -e "${RED}Please run:${NC}"
-    echo -e ""
-    echo -e "${RED}sudo pacman -Syyu${NC}"
-    echo -e ""
-    echo -e "${RED}Then restart your computer${NC}"
-    echo -e ""
+    echo -e "\n${YELLOW}${completed} steps was completed"
+    echo -e "There was many attemps to solve the issue but still unable to automatically fix.\n"
+    echo -e "${RED}Please run:${NC}\n${RED}sudo pacman -Syyu${NC}\n\n${RED}Then restart your computer${NC}\n"
 fi
 
 # To set presentation mode
