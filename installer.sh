@@ -330,22 +330,22 @@ function remove_dropped_packages() {
 }
 
 function update_grub() {
-    old_boot_drive_uuid=$(sudo lsblk -o uuid $boot_drive | grep -v UUID)
     boot=($(lsblk --list --fs | grep FAT32))
     boot_drive=/dev/${boot[0]}
+    old_boot_drive_uuid=$(lsblk -o uuid $boot_drive | grep -v UUID)
 
     as_su umount $boot_drive
     as_su mkfs.fat -F32 $boot_drive >/dev/null 2>&1
     
     as_su systemctl daemon-reload
     as_su mount $boot_drive /boot/efi
-    new_boot_drive_uuid=$(sudo lsblk -o uuid $boot_drive | grep -v UUID)
+    new_boot_drive_uuid=$(lsblk -o uuid $boot_drive | grep -v UUID)
     as_su sed -i "s/$old_boot_drive_uuid/$new_boot_drive_uuid/g" /etc/fstab
 
     smart_install grub;
     as_su mkinitcpio -P >/dev/null 2>&1
     as_su grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=KOOMPI_OS >/dev/null 2>&1
-    as_su grub-mkconfig -o /boot/grub/grub.cfg >/dev/null 2>&1
+    as_su grub-mkconfig -o /boot/grub/grub.cfg >/dev/null 2>&1 
 }
 
 function apply_config() {
