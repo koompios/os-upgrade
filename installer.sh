@@ -17,7 +17,7 @@ completed=0
 
 PASSWORD="";
 
-CURRENT_TIME=$(date +"%d-%m-%y");
+CURRENT_TIME=$(date +"%d-%m-%y-%H-%m-%S");
 
 function setup_log() {
     as_su mkdir -p /var/log/koompi-os-upgrade-${CURRENT_TIME} -m 770
@@ -350,18 +350,44 @@ function update_grub() {
     boot_drive=/dev/${boot[0]}
     old_boot_drive_uuid=$(lsblk -o uuid $boot_drive | grep -v UUID)
 
-    as_su umount $boot_drive
-    as_su mkfs.fat -F32 $boot_drive > /tmp/boot.log 2>&1
-    
-    as_su systemctl daemon-reload
-    as_su mount $boot_drive /boot/efi
+    echo boot_drive=${boot_drive} >>/tmp/boot.log
+    echo -e "old_boot_drive_uuid=${old_boot_drive_uuid}\n" >>/tmp/boot.log
+
+    as_su umount $boot_drive && echo Unmounted $boot_drive >>/tmp/boot.log
+    as_su mkfs.fat -F32 $boot_drive &>>/tmp/boot.log
+
+    as_su systemctl daemon-reload 
     new_boot_drive_uuid=$(lsblk -o uuid $boot_drive | grep -v UUID)
-    as_su sed -i "s/$old_boot_drive_uuid/$new_boot_drive_uuid/g" /etc/fstab
+
+    ## The operation is too fast that the UUID doesn't change fast enough causing query of new uuid
+    ## to be the same as old.
+    if [[ ${new_boot_drive_uuid} == ${old_boot_drive_uuid} ]];
+    then
+        sleep 5; 
+        new_boot_drive_uuid=$(lsblk -o uuid $boot_drive | grep -v UUID);
+    fi
+
+    as_su mount -U ${new_boot_drive_uuid} /boot/efi && echo -e "Mounted $boot_drive\n" >>/tmp/boot.log
+
+    echo new_boot_drive_uuid=${new_boot_drive_uuid} >>/tmp/boot.log
+    echo -e "\n====================================== old fstab ====================================" >>/tmp/boot.log
+    as_su cat /etc/fstab &>>/tmp/boot.log
+    echo "=====================================================================================" >>/tmp/boot.log
+
+    as_su sed -i "s/$old_boot_drive_uuid/$new_boot_drive_uuid/g" /etc/fstab 
+
+    echo "====================================== new fstab ====================================" >>/tmp/boot.log
+    as_su cat /etc/fstab &>>/tmp/boot.log
+    echo -e "=====================================================================================\n" >>/tmp/boot.log
 
     smart_install grub;
-    as_su mkinitcpio -P > /tmp/boot.log 2>&1
-    as_su grub-install --target=x86_64-efi --bootloader-id=KOOMPI_OS --recheck > /tmp/boot.log 2>&1
-    as_su grub-mkconfig -o /boot/grub/grub.cfg > /tmp/boot.log 2>&1
+    as_su mkinitcpio -P &>>/tmp/boot.log
+
+    echo -e "\n" >>/tmp/boot.log
+    as_su grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=KOOMPI_OS --recheck &>>/tmp/boot.log 
+
+    echo -e "\n" >>/tmp/boot.log
+    as_su grub-mkconfig -o /boot/grub/grub.cfg &>>/tmp/boot.log
 }
 
 function apply_config() {
@@ -381,6 +407,7 @@ function allow_power_management() {
 }
 
 checkpw
+setup_log
 prevent_power_management
 
 echo -e "${CYAN}====================================================================== ${NC}"
