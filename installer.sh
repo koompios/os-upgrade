@@ -344,7 +344,7 @@ function update_grub() {
 
     smart_install grub;
     as_su mkinitcpio -P >/dev/null 2>&1
-    as_su grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=KOOMPI_OS >/dev/null 2>&1
+    as_su grub-install --target=x86_64-efi --bootloader-id=KOOMPI_OS --recheck >/dev/null 2>&1
     as_su grub-mkconfig -o /boot/grub/grub.cfg >/dev/null 2>&1 
 }
 
