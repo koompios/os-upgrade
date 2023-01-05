@@ -289,6 +289,9 @@ function remove_dropped_packages() {
         koompi-linux-headers \
         koompi-linux-docs \
         acpi_call-koompi-linux \
+        acpi_call-lts \
+        linux-lts \
+        linux-lts-headers \
         koompi-libinput \
         koompi-xf86-input-libinput \
         sel-protocol \
