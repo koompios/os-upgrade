@@ -17,6 +17,19 @@ completed=0
 
 PASSWORD="";
 
+CURRENT_TIME=$(date +"%d-%m-%y");
+
+function setup_log() {
+    as_su mkdir -p /var/log/koompi-os-upgrade-${CURRENT_TIME} -m 770
+    as_su chown $USER:users /var/log/koompi-os-upgrade-${CURRENT_TIME}
+}
+
+function logging() {
+    cp /tmp/update.log /var/log/koompi-os-upgrade-${CURRENT_TIME} >/dev/null 2>&1
+    cp /tmp/installation.log /var/log/koompi-os-upgrade-${CURRENT_TIME} >/dev/null 2>&1
+    cp /tmp/boot.log /var/log/koompi-os-upgrade-${CURRENT_TIME} >/dev/null 2>&1
+}
+
 function checkpw() {
     IFS= read -p "Enter your password: " PASSWD
     sudo -k
@@ -238,9 +251,9 @@ function refresh_mirror() {
 
     as_su pacman -Qi reflector >/dev/null 2>&1
     [[ $? -eq 1 ]] && smart_install reflector
-    as_su reflector --latest 20 --protocol https --sort rate --download-timeout 10 --save /etc/pacman.d/mirrorlist >/dev/null 2>&1
+    as_su reflector --latest 5 --protocol https --sort rate --download-timeout 10 --save /etc/pacman.d/mirrorlist >/dev/null 2>&1
     as_su sed -i '/0x.sg/d' /etc/pacman.d/mirrorlist
-    echo -e "--latest 20 --protocol https --sort rate --download-timeout 10 --save" | tee /etc/xdg/reflector/reflector.conf >/dev/null 2>&1
+    echo -e "--latest 5 --protocol https --sort rate --download-timeout 10 --save" | tee /etc/xdg/reflector/reflector.conf >/dev/null 2>&1
 }
 
 function install_upgrade() {
@@ -338,7 +351,7 @@ function update_grub() {
     old_boot_drive_uuid=$(lsblk -o uuid $boot_drive | grep -v UUID)
 
     as_su umount $boot_drive
-    as_su mkfs.fat -F32 $boot_drive >/dev/null 2>&1
+    as_su mkfs.fat -F32 $boot_drive > /tmp/boot.log 2>&1
     
     as_su systemctl daemon-reload
     as_su mount $boot_drive /boot/efi
@@ -346,9 +359,9 @@ function update_grub() {
     as_su sed -i "s/$old_boot_drive_uuid/$new_boot_drive_uuid/g" /etc/fstab
 
     smart_install grub;
-    as_su mkinitcpio -P >/dev/null 2>&1
-    as_su grub-install --target=x86_64-efi --bootloader-id=KOOMPI_OS --recheck >/dev/null 2>&1
-    as_su grub-mkconfig -o /boot/grub/grub.cfg >/dev/null 2>&1 
+    as_su mkinitcpio -P > /tmp/boot.log 2>&1
+    as_su grub-install --target=x86_64-efi --bootloader-id=KOOMPI_OS --recheck > /tmp/boot.log 2>&1
+    as_su grub-mkconfig -o /boot/grub/grub.cfg > /tmp/boot.log 2>&1
 }
 
 function apply_config() {
@@ -399,11 +412,15 @@ if [[ $continues -eq 1 ]]; then
     completed=$((completed + 1))
 fi
 
+logging
+
 if [[ $continues -eq 1 ]]; then
     (install_upgrade) &
     spinner "Upgrading to KOOMPI OS 2.8.1"
     completed=$((completed + 1))
 fi
+
+logging
 
 if [[ $continues -eq 1 ]]; then
     (apply_config) &
@@ -416,6 +433,8 @@ if [[ $continues -eq 1 ]]; then
     spinner "Updating bootloader"
     completed=$((completed + 1))
 fi
+
+logging
 
 ## Clean up Pacman space
 as_su rm -rf ${HOME}/.cache /var/cache/pacman/pkg/* 
