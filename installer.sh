@@ -303,6 +303,7 @@ function remove_dropped_packages() {
         koompi-linux-docs \
         acpi_call-koompi-linux \
         acpi_call-lts \
+        celt \
         linux-lts \
         linux-lts-headers \
         koompi-libinput \
@@ -318,17 +319,20 @@ function remove_dropped_packages() {
         fcitx5-chewing \
         fcitx5-rime \
         lftp \
+        libkipi \
         livecd-sound \
         lynx \
         mkinitcpio-archiso \
         nbd \
         openconnect \
         pptpclient \
+        qt5-webkit \
         rp-pppoe \
         wvdial \
         xl2tpd \
         tcpdump \
         vpnc \
+        pix \
         pulseaudio \
         pulseaudio-alsa \
         pulseaudio-jack \
