@@ -71,7 +71,7 @@ function spinner() {
 }
 
 function smart_update() {
-    # prevent stale becuase of db lock
+    # prevent stale because of db lock
     [[ -f "/var/lib/pacman/db.lck" ]] && as_su rm -rf /var/lib/pacman/db.lck
     if [[ $smart_update_retries > 0 ]]; then
         [[ $smart_update_retries < 5 ]] && echo -e "\n${GREEN}Smart update pass: $smart_update_retries${NC}" || echo -e "\n${YELLOW}Smart update pass: $smart_update_retries${NC}"
@@ -303,6 +303,7 @@ function remove_dropped_packages() {
         koompi-linux-docs \
         acpi_call-koompi-linux \
         acpi_call-lts \
+        celt \
         linux-lts \
         linux-lts-headers \
         koompi-libinput \
@@ -318,17 +319,20 @@ function remove_dropped_packages() {
         fcitx5-chewing \
         fcitx5-rime \
         lftp \
+        libkipi \
         livecd-sound \
         lynx \
         mkinitcpio-archiso \
         nbd \
         openconnect \
         pptpclient \
+        qt5-webkit \
         rp-pppoe \
         wvdial \
         xl2tpd \
         tcpdump \
         vpnc \
+        pix \
         pulseaudio \
         pulseaudio-alsa \
         pulseaudio-jack \
@@ -360,7 +364,8 @@ function update_grub() {
     new_boot_drive_uuid=$(lsblk -o uuid $boot_drive | grep -v UUID)
 
     ## The operation is too fast that the UUID doesn't change fast enough causing query of new uuid
-    ## to be the same as old.
+    ## to be the same as old. This caused mount to fail and subsequently grub-install would fail 
+    ## leading to system unbootable. Therefore, this loop requery the UUID until it changes. 
     while true;
     do
         if [[ ${new_boot_drive_uuid} == ${old_boot_drive_uuid} ]];
