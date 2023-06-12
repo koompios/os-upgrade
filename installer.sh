@@ -258,7 +258,7 @@ function refresh_mirror() {
     then
         echo 'Server = https://mirror.koompi.org/archlinux/$repo/os/$arch' | sudo tee /etc/pacman.d/mirrorlist >/dev/null 2>&1
         as_su sed -i '/0x.sg/d' /etc/pacman.d/mirrorlist
-    elif
+    else
         as_su reflector --latest 5 --protocol https --sort rate --download-timeout 10 --save /etc/pacman.d/mirrorlist >/dev/null 2>&1
     fi
 
