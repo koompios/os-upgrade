@@ -251,8 +251,17 @@ function refresh_mirror() {
 
     as_su pacman -Qi reflector >/dev/null 2>&1
     [[ $? -eq 1 ]] && smart_install reflector
-    as_su reflector --latest 5 --protocol https --sort rate --download-timeout 10 --save /etc/pacman.d/mirrorlist >/dev/null 2>&1
-    as_su sed -i '/0x.sg/d' /etc/pacman.d/mirrorlist
+
+    local CHECK_LOCAL_MIRROR=`getent hosts "mirror.koompi.org" | awk 'NR==1' | awk '{ print $1 }'`
+
+    if [[ "${CHECK_LOCAL_MIRROR}" =~ 10+\.[0-9]+\.[0-9]+\.[0-9]+$ ]];
+    then
+        echo 'Server = https://mirror.koompi.org/archlinux/$repo/os/$arch' | sudo tee /etc/pacman.d/mirrorlist >/dev/null 2>&1
+        as_su sed -i '/0x.sg/d' /etc/pacman.d/mirrorlist
+    elif
+        as_su reflector --latest 5 --protocol https --sort rate --download-timeout 10 --save /etc/pacman.d/mirrorlist >/dev/null 2>&1
+    fi
+
     echo -e "--latest 5 --protocol https --sort rate --download-timeout 10 --save" | tee /etc/xdg/reflector/reflector.conf >/dev/null 2>&1
 }
 
