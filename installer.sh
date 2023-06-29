@@ -289,6 +289,7 @@ function install_upgrade() {
         pipewire-pulse \
         pipewire-alsa \
         wireplumber \
+        telegram-desktop \
         libinput \
         xf86-input-libinput \
         kcalc \
@@ -355,6 +356,8 @@ function remove_dropped_packages() {
         ipw2100-fw \
         ipw2200-fw  \
         progsreiserfs \
+        telegram-desktop-bin \
+        js78 \
         calamares;                 
 }
 
