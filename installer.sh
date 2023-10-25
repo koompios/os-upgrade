@@ -304,7 +304,7 @@ function remove_dropped_packages() {
     # Workaround: install wireplumber before update to prevent smart_update
     # recursive hell due to inabiblity to select default package by --noconfirm
     # UPDATE: Added CALAMARES due to old version install it without pacman and leave leftover file without install
-    smart_install wireplumber koompi-calamares calamares
+    smart_install wireplumber koompi-calamares
 
     smart_remove \
         pipewire-media-session \
