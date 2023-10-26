@@ -267,6 +267,7 @@ function refresh_mirror() {
 
 function install_upgrade() {
     smart_install \
+        kirigami-addons5 \
         linux \
         linux-headers \
         linux-firmware \
