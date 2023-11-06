@@ -267,6 +267,7 @@ function refresh_mirror() {
 
 function install_upgrade() {
     smart_install \
+        networkmanager
         kirigami-addons5 \
         linux \
         linux-headers \
@@ -299,6 +300,7 @@ function install_upgrade() {
     # release config
     echo -e "[General]\nName=KOOMPI OS\nPRETTY_NAME=KOOMPI OS\nLogoPath=/usr/share/icons/koompi/koompi.svg\nWebsite=http://www.koompi.com\nVersion=2.8.1\nVariant=Rolling Release\nUseOSReleaseVersion=false" | sudo tee /etc/xdg/kcm-about-distrorc >/dev/null 2>&1
     echo -e 'NAME="KOOMPI OS"\nPRETTY_NAME="KOOMPI OS"\nID=koompi\nBUILD_ID=rolling\nANSI_COLOR="38;2;23;147;209"\nHOME_URL="https://www.koompi.com/"\nDOCUMENTATION_URL="https://wiki.koompi.org/"\nSUPPORT_URL="https://t.me/koompi"\nBUG_REPORT_URL="https://t.me/koompi"\nLOGO=/usr/share/icons/koompi/koompi.svg' | sudo tee /etc/os-release >/dev/null 2>&1
+    echo -e '[device]\nwifi.backend=iwd\n' | sudo tee /etc/NetworkManager/conf.d/iwd.conf >/dev/null 2>&1
 }
 
 function remove_dropped_packages() {
@@ -308,6 +310,8 @@ function remove_dropped_packages() {
     smart_install wireplumber koompi-calamares
 
     smart_remove \
+        jre-openjdk \
+        networkmanager-iwd \
         pipewire-media-session \
         koompi-linux \
         koompi-linux-headers \
