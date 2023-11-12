@@ -276,7 +276,6 @@ function install_upgrade() {
         acpi \
         fcitx5-im \
         koompi-skel \
-        networkmanager-iwd \
         realtime-privileges \
         fcitx5-chinese-addons \
         ksysguard \
