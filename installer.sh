@@ -266,8 +266,9 @@ function refresh_mirror() {
 }
 
 function install_upgrade() {
+    smart_remove networkmanager-iwd;
     smart_install \
-        networkmanager
+        networkmanager \
         kirigami-addons5 \
         linux \
         linux-headers \
@@ -311,7 +312,6 @@ function remove_dropped_packages() {
 
     smart_remove \
         jre-openjdk \
-        networkmanager-iwd \
         pipewire-media-session \
         koompi-linux \
         koompi-linux-headers \
