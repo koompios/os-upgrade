@@ -310,7 +310,7 @@ function remove_dropped_packages() {
     smart_install wireplumber koompi-calamares
 
     smart_remove \
-        jre-openjdk \
+        jre-openjdk-headless \
         pipewire-media-session \
         koompi-linux \
         koompi-linux-headers \
