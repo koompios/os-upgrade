@@ -268,11 +268,46 @@ function refresh_mirror() {
 function install_upgrade() {
     smart_remove networkmanager-iwd;
     smart_install \
+        gnome-text-editor \
+        gnome-disk-utility \
+        gnome-tweaks \
+        eog \
+        gnome-shell \
+        gnome-session \
+        gnome-console \
+        gnome-calculator \
+        gnome-software \
+        mesa \
+        gnome-control-center \
+        gnome-settings-daemon \
+        gnome-system-monitor \
         networkmanager \
         kirigami-addons5 \
         linux \
         linux-headers \
         linux-firmware \
+        linux-zen \
+        linux-zen-header \
+        koompi-os \
+        pizard \
+        automatic-update \
+        starship \
+        adwdialog \
+        koompi-control-center \
+        micro-distrobox \
+        pix \
+        jade-gui \
+        python-yaml \
+        koompi-backgrounds \
+        flatpak \
+        waydroid-koompi \
+        waydroid-image \
+        waydroid-script \
+        wpm \
+        android-tools \
+        yay \
+        koompi-gnome-extensions \
+        gnome-shell-extension-dash-to-dock \
         acpi \
         fcitx5-im \
         koompi-skel \
@@ -298,9 +333,10 @@ function install_upgrade() {
         rtw88-dkms-git;
 
     # release config
-    echo -e "[General]\nName=KOOMPI OS\nPRETTY_NAME=KOOMPI OS\nLogoPath=/usr/share/icons/koompi/koompi.svg\nWebsite=http://www.koompi.com\nVersion=2.8.1\nVariant=Rolling Release\nUseOSReleaseVersion=false" | sudo tee /etc/xdg/kcm-about-distrorc >/dev/null 2>&1
-    echo -e 'NAME="KOOMPI OS"\nPRETTY_NAME="KOOMPI OS"\nID=koompi\nBUILD_ID=rolling\nANSI_COLOR="38;2;23;147;209"\nHOME_URL="https://www.koompi.com/"\nDOCUMENTATION_URL="https://wiki.koompi.org/"\nSUPPORT_URL="https://t.me/koompi"\nBUG_REPORT_URL="https://t.me/koompi"\nLOGO=/usr/share/icons/koompi/koompi.svg' | sudo tee /etc/os-release >/dev/null 2>&1
-    echo -e '[device]\nwifi.backend=iwd\n' | sudo tee /etc/NetworkManager/conf.d/iwd.conf >/dev/null 2>&1
+    # # Remove /etc/os-release and install the KOOMPI-OS package instead
+    # echo -e "[General]\nName=KOOMPI OS\nPRETTY_NAME=KOOMPI OS\nLogoPath=/usr/share/icons/koompi/koompi.svg\nWebsite=http://www.koompi.com\nVersion=2.8.1\nVariant=Rolling Release\nUseOSReleaseVersion=false" | sudo tee /etc/xdg/kcm-about-distrorc >/dev/null 2>&1
+    # echo -e 'NAME="KOOMPI OS"\nPRETTY_NAME="KOOMPI OS"\nID=koompi\nBUILD_ID=rolling\nANSI_COLOR="38;2;23;147;209"\nHOME_URL="https://www.koompi.com/"\nDOCUMENTATION_URL="https://wiki.koompi.org/"\nSUPPORT_URL="https://t.me/koompi"\nBUG_REPORT_URL="https://t.me/koompi"\nLOGO=/usr/share/icons/koompi/koompi.svg' | sudo tee /etc/os-release >/dev/null 2>&1
+    # echo -e '[device]\nwifi.backend=iwd\n' | sudo tee /etc/NetworkManager/conf.d/iwd.conf >/dev/null 2>&1
 }
 
 function remove_dropped_packages() {
@@ -444,7 +480,7 @@ echo -e "${CYAN} ██╔═██╗ ██║   ██║██║   ██�
 echo -e "${CYAN} ██║  ██╗╚██████╔╝╚██████╔╝██║ ╚═╝ ██║██║     ██║    ╚██████╔╝███████║ ${NC}"
 echo -e "${CYAN} ╚═╝  ╚═╝ ╚═════╝  ╚═════╝ ╚═╝     ╚═╝╚═╝     ╚═╝     ╚═════╝ ╚══════╝ ${NC}"
 echo -e "${CYAN}====================================================================== ${NC}\n"
-echo -e "Upgrade to version 2.8.1\nInitialzing generation upgrade\n"
+echo -e "Upgrade to version 3.0.0\nInitialzing generation upgrade\n"
 echo -e "${RED}NOTE: During update, do not turn off your computer.${NC}\n"
 
 if [[ $continues -eq 1 ]]; then
@@ -469,7 +505,7 @@ logging
 
 if [[ $continues -eq 1 ]]; then
     (install_upgrade) &
-    spinner "Upgrading to KOOMPI OS 2.8.1"
+    spinner "Upgrading to KOOMPI OS 3.0.0"
     completed=$((completed + 1))
 fi
 
@@ -494,9 +530,13 @@ as_su rm -rf ${HOME}/.cache /var/cache/pacman/pkg/*
 
 allow_power_management
 
+## Make Gnome as default session
+sudo sed -i 's/^Session=.*/Session=gnome/' /etc/sddm.conf
+
+
 if [[ $continues -eq 1 ]]; then
     echo -e "\n${CYAN}====================================================================== ${NC}\n"
-    echo -e "${GREEN}Upgraded to version 2.8.1${NC}"
+    echo -e "${GREEN}Upgraded to version 3.0.0${NC}"
     echo -e "${YELLOW}Please restart your computer before continue using.${NC}\n"
 
 else
