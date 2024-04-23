@@ -3,81 +3,22 @@
 # Colors
 NC='\033[0m' # No Color
 RED='\033[0;31m'
-YELLOW='\033[1;33m'
-CYAN='\033[0;36m'
+BLACK='\033[0;30m'
 GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+PURPEL='\033[0;35m'
+CYAN='\033[0;36m'
+YELLOW='\033[1;33m'
 
-# Global variables
 smart_install_retries=0
 smart_update_retries=0
 continues=1
 completed=0
-PASSWORD=""
-CURRENT_TIME=$(date +"%d-%m-%y-%H-%m-%S")
 
-# Main function
-main() {
-    echo -e "${CYAN}====================================================================== ${NC}"
-    echo -e "${CYAN} ██╗  ██╗ ██████╗  ██████╗ ███╗   ███╗██████╗ ██╗     ██████╗ ███████╗ ${NC}"
-    echo -e "${CYAN} ██║ ██╔╝██╔═══██╗██╔═══██╗████╗ ████║██╔══██╗██║    ██╔═══██╗██╔════╝ ${NC}"
-    echo -e "${CYAN} █████╔╝ ██║   ██║██║   ██║██╔████╔██║██████╔╝██║    ██║   ██║███████╗ ${NC}"
-    echo -e "${CYAN} ██╔═██╗ ██║   ██║██║   ██║██║╚██╔╝██║██╔═══╝ ██║    ██║   ██║╚════██║ ${NC}"
-    echo -e "${CYAN} ██║  ██╗╚██████╔╝╚██████╔╝██║ ╚═╝ ██║██║     ██║    ╚██████╔╝███████║ ${NC}"
-    echo -e "${CYAN} ╚═╝  ╚═╝ ╚═════╝  ╚═════╝ ╚═╝     ╚═╝╚═╝     ╚═╝     ╚═════╝ ╚══════╝ ${NC}"
-    echo -e "${CYAN}====================================================================== ${NC}\n"
-    echo -e "Upgrade to version 3.0.0\nInitializing upgrade process\n"
-    echo -e "${RED}NOTE: During the update, do not turn off your computer.${NC}\n"
+PASSWORD="";
 
+CURRENT_TIME=$(date +"%d-%m-%y-%H-%m-%S");
 
-    checkpw
-    setup_log
-    prevent_power_management
-
-    echo -e "${CYAN}====================================================================== ${NC}\n"
-    echo -e "${YELLOW}Step 1: Ranking mirror repositories${NC}\n"
-    refresh_mirror
-
-    echo -e "${CYAN}====================================================================== ${NC}\n"
-    echo -e "${YELLOW}Step 2: Removing dropped packages${NC}\n"
-    remove_dropped_packages
-
-    echo -e "${CYAN}====================================================================== ${NC}\n"
-    echo -e "${YELLOW}Step 3: Updating all installed applications${NC}\n"
-    smart_update
-
-    echo -e "${CYAN}====================================================================== ${NC}\n"
-    echo -e "${YELLOW}Step 4: Upgrading to KOOMPI OS 3.0.0${NC}\n"
-    install_upgrade
-
-    echo -e "${CYAN}====================================================================== ${NC}\n"
-    echo -e "${YELLOW}Step 5: Updating configurations${NC}\n"
-    apply_config
-
-    echo -e "${CYAN}====================================================================== ${NC}\n"
-    echo -e "${YELLOW}Step 6: Updating bootloader${NC}\n"
-    update_grub
-
-    logging
-
-    ## Clean up Pacman space
-    as_su rm -rf ${HOME}/.cache /var/cache/pacman/pkg/*
-
-    allow_power_management
-
-
-    if [[ $continues -eq 1 ]]; then
-        echo -e "\n${CYAN}====================================================================== ${NC}\n"
-        echo -e "${GREEN}Upgrade to version 3.0.0 completed${NC}"
-        echo -e "${YELLOW}Please restart your computer before continuing to use.${NC}\n"
-
-    else
-        echo -e "\n${RED}====================================================================== ${NC}\n"
-        echo -e "${RED}Upgrade failed${NC}"
-        echo -e "\n${YELLOW}${completed} steps were completed"
-        echo -e "There were many attempts to solve the issue but still unable to automatically fix.\n"
-        echo -e "${RED}Please run:${NC}\n${RED}sudo pacman -Syyu${NC}\n\n${RED}Then restart your computer${NC}\n"
-    fi
-}
 
 function setup_log() {
     as_su mkdir -p /var/log/koompi-os-upgrade-${CURRENT_TIME} -m 770
@@ -209,15 +150,11 @@ function smart_update() {
 }
 
 smart_install_packages() {
-    # Increment the smart_install_pass counter
-    smart_install_pass=$((smart_install_pass + 1))
-
-    # prevent stale becuase of db lock
-    [[ -f "/var/lib/pacman/db.lck" ]] && as_su rm -rf /var/lib/pacman/db.lck
-    if [[ $smart_install_retries > 0 ]]; then
-        [[ $smart_install_retries < 5 ]] && echo -e "\n${GREEN}Smart install pass: $smart_install_retries${NC}" || echo -e "\n${YELLOW}Smart install pass: $smart_install_retries${NC}"
+    # Check if the packages file exists
+    if [ ! -f "packages" ]; then
+        echo "Error: Packages file 'packages' not found."
+        return 1
     fi
-
 
     # Read each line from the packages file and call smart_install function
     while IFS= read -r package; do
@@ -234,7 +171,7 @@ smart_install_packages() {
             # Call smart_install function for each package
             smart_install "$package"
         fi
-    done < "install_packages"
+    done < "packages"
 }
 
 
@@ -246,7 +183,7 @@ function smart_install() {
         [[ $smart_install_retries < 5 ]] && echo -e "\n${GREEN}Smart install pass: $smart_install_retries${NC}" || echo -e "\n${YELLOW}Smart install pass: $smart_install_retries${NC}"
     fi
 
-    # as_su pacman -Syy >/dev/null 2>&1
+    as_su pacman -Syy >/dev/null 2>&1
     as_su pacman -S --needed --noconfirm $@ --overwrite="*" > /dev/null 2>&1 >/tmp/installation.log
 
     if [[ $? -eq 1 ]]; then
@@ -320,32 +257,6 @@ function smart_install() {
 
 }
 
-smart_remove_packages() {
-    # Check if the packages file exists
-    if [ ! -f "remove_packages" ]; then
-        echo "Error: Packages file 'packages' not found."
-        return 1
-    fi
-
-    # Read each line from the packages file and call smart_install function
-    while IFS= read -r package; do
-        # Ignore lines starting with '#' (comments or section headings)
-        if [[ "$package" =~ ^# ]]; then
-            continue
-        fi
-        
-        # Trim leading and trailing whitespace
-        package=$(echo "$package" | xargs)
-        
-        # Check if the package is not empty
-        if [ -n "$package" ]; then
-            # Call smart_remove function for each package
-            smart_remove "$package"
-        fi
-    done < "remove_packages"
-}
-
-
 function smart_remove() {
     for pkg in $@; do
         as_su pacman -Qi $pkg > /dev/null 2>&1
@@ -398,9 +309,62 @@ function remove_dropped_packages() {
     # recursive hell due to inabiblity to select default package by --noconfirm
     # UPDATE: Added CALAMARES due to old version install it without pacman and leave leftover file without install
     # smart_install wireplumber koompi-calamares
-    smart_remove_packages
+
     smart_remove \
-  
+        sddm \
+        jre-openjdk-headless \
+        pipewire-media-session \
+        koompi-linux \
+        koompi-linux-headers \
+        koompi-linux-docs \
+        acpi_call-koompi-linux \
+        acpi_call-lts \
+        celt \
+        linux-lts \
+        linux-lts-headers \
+        koompi-libinput \
+        koompi-xf86-input-libinput \
+        sel-protocol \
+        handbrake \
+        pipewire-jack \
+        bind-tools \
+        clonezilla \
+        darkhttpd \
+        ddrescue \
+        espeakup \
+        fcitx5-chewing \
+        fcitx5-rime \
+        lftp \
+        libkipi \
+        livecd-sound \
+        lynx \
+        mkinitcpio-archiso \
+        nbd \
+        openconnect \
+        pptpclient \
+        qt5-webkit \
+        rp-pppoe \
+        wvdial \
+        xl2tpd \
+        tcpdump \
+        vpnc \
+        pix \
+        pulseaudio \
+        pulseaudio-alsa \
+        pulseaudio-jack \
+        pulseaudio-bluetooth \
+        rtl8723bu-dkms-koompi \
+        rtl8723bu-dkms-linux \
+        rtl8723bu-dkms-zen \
+        rtl8723bu-git-dkms \
+        freemind \
+        koompi-calamares \
+        ipw2100-fw \
+        ipw2200-fw  \
+        progsreiserfs \
+        telegram-desktop-bin \
+        js78 \
+        calamares;                 
 }
 
 function update_grub() {
@@ -470,5 +434,88 @@ function allow_power_management() {
     as_su systemctl --quiet --runtime unmask halt.target poweroff.target reboot.target kexec.target suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target sleep.target >/dev/null 2>&1
 }
 
-# Call the main function
-main
+checkpw
+setup_log
+prevent_power_management
+
+echo -e "${CYAN}====================================================================== ${NC}"
+echo -e "${CYAN} ██╗  ██╗ ██████╗  ██████╗ ███╗   ███╗██████╗ ██╗     ██████╗ ███████╗ ${NC}"
+echo -e "${CYAN} ██║ ██╔╝██╔═══██╗██╔═══██╗████╗ ████║██╔══██╗██║    ██╔═══██╗██╔════╝ ${NC}"
+echo -e "${CYAN} █████╔╝ ██║   ██║██║   ██║██╔████╔██║██████╔╝██║    ██║   ██║███████╗ ${NC}"
+echo -e "${CYAN} ██╔═██╗ ██║   ██║██║   ██║██║╚██╔╝██║██╔═══╝ ██║    ██║   ██║╚════██║ ${NC}"
+echo -e "${CYAN} ██║  ██╗╚██████╔╝╚██████╔╝██║ ╚═╝ ██║██║     ██║    ╚██████╔╝███████║ ${NC}"
+echo -e "${CYAN} ╚═╝  ╚═╝ ╚═════╝  ╚═════╝ ╚═╝     ╚═╝╚═╝     ╚═╝     ╚═════╝ ╚══════╝ ${NC}"
+echo -e "${CYAN}====================================================================== ${NC}\n"
+echo -e "Upgrade to version 3.0.0\nInitialzing generation upgrade\n"
+echo -e "${RED}NOTE: During update, do not turn off your computer.${NC}\n"
+
+if [[ $continues -eq 1 ]]; then
+    (refresh_mirror) &
+    spinner "Ranking mirror repositories"
+    completed=$((completed + 1))
+fi
+
+if [[ $continues -eq 1 ]]; then
+    (remove_dropped_packages) &
+    spinner "Removing dropped packages"
+    completed=$((completed + 1))
+fi
+
+if [[ $continues -eq 1 ]]; then
+    (smart_update) &
+    spinner "Updating all installed applications" 2>/dev/null
+    completed=$((completed + 1))
+fi
+
+logging
+
+if [[ $continues -eq 1 ]]; then
+    (install_upgrade) &
+    spinner "Upgrading to KOOMPI OS 3.0.0"
+    completed=$((completed + 1))
+fi
+
+logging
+
+if [[ $continues -eq 1 ]]; then
+    (apply_config) &
+    spinner "Updating configurations"
+    completed=$((completed + 1))
+fi
+
+if [[ $continues -eq 1 ]]; then
+    (update_grub) &
+    spinner "Updating bootloader"
+    completed=$((completed + 1))
+fi
+
+logging
+
+## Clean up Pacman space
+as_su rm -rf ${HOME}/.cache /var/cache/pacman/pkg/* 
+
+allow_power_management
+
+## Make Gnome as default session
+sudo sed -i 's/^Session=.*/Session=gnome/' /etc/sddm.conf
+
+
+if [[ $continues -eq 1 ]]; then
+    echo -e "\n${CYAN}====================================================================== ${NC}\n"
+    echo -e "${GREEN}Upgraded to version 3.0.0${NC}"
+    echo -e "${YELLOW}Please restart your computer before continue using.${NC}\n"
+
+else
+    echo -e "\n${RED}====================================================================== ${NC}\n"
+    echo -e "${RED}Upgraded failed${NC}"
+    echo -e "\n${YELLOW}${completed} steps was completed"
+    echo -e "There was many attemps to solve the issue but still unable to automatically fix.\n"
+    echo -e "${RED}Please run:${NC}\n${RED}sudo pacman -Syyu${NC}\n\n${RED}Then restart your computer${NC}\n"
+fi
+
+# To set presentation mode
+# inhibit_cookie=$(qdbus org.freedesktop.PowerManagement.Inhibit /org/freedesktop/PowerManagement/Inhibit org.freedesktop.PowerManagement.Inhibit.Inhibit "a name" "a reason")
+
+# To unset presentation mode
+# qdbus org.freedesktop.PowerManagement.Inhibit /org/freedesktop/PowerManagement/Inhibit org.freedesktop.PowerManagement.Inhibit.UnInhibit $inhibit_cookie
+

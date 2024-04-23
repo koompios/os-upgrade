@@ -209,15 +209,11 @@ function smart_update() {
 }
 
 smart_install_packages() {
-    # Increment the smart_install_pass counter
-    smart_install_pass=$((smart_install_pass + 1))
-
-    # prevent stale becuase of db lock
-    [[ -f "/var/lib/pacman/db.lck" ]] && as_su rm -rf /var/lib/pacman/db.lck
-    if [[ $smart_install_retries > 0 ]]; then
-        [[ $smart_install_retries < 5 ]] && echo -e "\n${GREEN}Smart install pass: $smart_install_retries${NC}" || echo -e "\n${YELLOW}Smart install pass: $smart_install_retries${NC}"
+    # Check if the packages file exists
+    if [ ! -f "install_packages" ]; then
+        echo "Error: Packages file 'packages' not found."
+        return 1
     fi
-
 
     # Read each line from the packages file and call smart_install function
     while IFS= read -r package; do
@@ -240,6 +236,9 @@ smart_install_packages() {
 
 
 function smart_install() {
+    # Increment the smart_install_pass counter
+    smart_install_pass=$((smart_install_pass + 1))
+
     # prevent stale becuase of db lock
     [[ -f "/var/lib/pacman/db.lck" ]] && as_su rm -rf /var/lib/pacman/db.lck
     if [[ $smart_install_retries > 0 ]]; then
@@ -469,6 +468,10 @@ function prevent_power_management() {
 function allow_power_management() {
     as_su systemctl --quiet --runtime unmask halt.target poweroff.target reboot.target kexec.target suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target sleep.target >/dev/null 2>&1
 }
+
+
+
+
 
 # Call the main function
 main
