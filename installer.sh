@@ -460,6 +460,17 @@ function apply_config() {
     as_su cp -r -T /etc/skel/ ${HOME}
     as_su chown ${USER}:users -R ${HOME} &>/dev/null
     as_su usermod -aG realtime ${USER}
+
+    # Set metadata
+    for file in $HOME/Desktop/*.desktop; do
+        gio set "$file" metadata::trusted true
+    done
+
+    # Change permissions
+    for file in $HOME/Desktop/*.desktop; do
+        as_su chmod a+x "$file"
+    done
+
 }
 
 function prevent_power_management() {

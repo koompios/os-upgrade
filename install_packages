@@ -168,7 +168,6 @@ xorriso
 os-prober
 gnome-disk-utility
 gnome-tweaks
-grub-koompi
 
 # Core packages
 koompi-skel
@@ -179,8 +178,6 @@ adwdialog
 koompi-control-center
 micro-distrobox
 pix
-pibee-git
-jade-gui
 python-yaml
 koompi-backgrounds
 flatpak
@@ -193,24 +190,24 @@ koompi-gnome-extensions
 #gnome-shell-extension-dash-to-dock
 
 # office
-libreoffice-fresh
-libreoffice-fresh-km
+#libreoffice-fresh
+#libreoffice-fresh-km
 
 ## Preinstall Software
-telegram-desktop
-gimp
-inkscape
-krita
-visual-studio-code-bin
-teams
-zoom
+#telegram-desktop
+#gimp
+#inkscape
+#krita
+#visual-studio-code-bin
+#teams
+#zoom
 
 ## OneLab
-imagemagick
-nodejs
-npm
-tigervnc
-x11vnc
+#imagemagick
+#nodejs
+#npm
+#tigervnc
+#x11vnc
 #anydesk-bin
 
 # Fonts
@@ -319,7 +316,7 @@ vulkan-headers
 vulkan-validation-layers
 
 # WIFI Firmware
-rtl8821ce-dkms-git
+#rtl8821ce-dkms-git
 
 
 ## GTK theme
