@@ -354,8 +354,10 @@ function smart_remove() {
 }
 
 function insert_koompi_repo() {
-    grep "dev.koompi.org" /etc/pacman.conf >/dev/null 2>&1
-    [[ $? -eq 1 ]] && echo -e '\n[koompi]\nSigLevel = Never\nServer = https://dev.koompi.org/koompi\n' | sudo tee -a /etc/pacman.conf >/dev/null 2>&1
+    if ! awk '/^\s*\[koompi\]/ { in_block = 0 } /^\s*\[koompi\]/ { in_block = 1 } in_block && !/^\s*#/ { found = 1 } END { exit !found }' /etc/pacman.conf; then
+        echo -e '\n[koompi]\nSigLevel = Never\nServer = https://dev.koompi.org/koompi\n' | sudo tee -a /etc/pacman.conf >/dev/null 2>&1
+    fi
+
 }
 
 function refresh_mirror() {
@@ -366,19 +368,40 @@ function refresh_mirror() {
 
     smart_install archlinux-keyring
 
-    as_su pacman -Qi reflector >/dev/null 2>&1
-    [[ $? -eq 1 ]] && smart_install reflector
-    echo -e "--latest 5 --protocol https --sort rate --download-timeout 10 --save" | tee /etc/xdg/reflector/reflector.conf >/dev/null 2>&1
+as_su pacman -Qi reflector >/dev/null 2>&1
+[[ $? -eq 1 ]] && smart_install reflector
 
-    local CHECK_LOCAL_MIRROR=`getent hosts "mirror.koompi.org" | awk 'NR==1' | awk '{ print $1 }'`
+echo -e "--latest 5 --protocol https --sort rate --download-timeout 10 --save" | tee /etc/xdg/reflector/reflector.conf >/dev/null 2>&1
 
-    if [[ "${CHECK_LOCAL_MIRROR}" =~ 10+\.[0-9]+\.[0-9]+\.[0-9]+$ ]];
-    then
-        echo 'Server = https://mirror.koompi.org/archlinux/$repo/os/$arch' | sudo tee /etc/pacman.d/mirrorlist >/dev/null 2>&1
-    else
-        as_su reflector --latest 5 --protocol https --sort rate --download-timeout 10 --save /etc/pacman.d/mirrorlist >/dev/null 2>&1
-        as_su sed -i '/0x.sg/d' /etc/pacman.d/mirrorlist
-    fi
+local CHECK_LOCAL_MIRROR=$(getent hosts "mirror.koompi.org" | awk 'NR==1' | awk '{ print $1 }')
+
+if [[ "${CHECK_LOCAL_MIRROR}" =~ 10+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    echo 'Server = https://mirror.koompi.org/archlinux/$repo/os/$arch' | sudo tee /etc/pacman.d/mirrorlist >/dev/null 2>&1
+else
+    # Replace the reflector commands with the predefined mirrorlist
+    cat <<EOF | sudo tee /etc/pacman.d/mirrorlist >/dev/null 2>&1
+################################################################################
+
+## Cambodia
+Server = http://mirror.sabay.com.kh/archlinux/\$repo/os/\$arch
+Server = https://mirror.sabay.com.kh/archlinux/\$repo/os/\$arch
+## Vietnam
+Server = http://mirror.bizflycloud.vn/archlinux/\$repo/os/\$arch
+Server = http://mirror.kirbee.tech/archlinux/\$repo/os/\$arch
+## Singapore
+Server = http://mirror.0x.sg/archlinux/\$repo/os/\$arch
+Server = https://mirror.0x.sg/archlinux/\$repo/os/\$arch
+Server = http://mirror.aktkn.sg/archlinux/\$repo/os/\$arch
+Server = https://mirror.aktkn.sg/archlinux/\$repo/os/\$arch
+Server = http://sg.mirrors.cicku.me/archlinux/\$repo/os/\$arch
+## Japan
+Server = http://mirrors.cat.net/archlinux/\$repo/os/\$arch
+Server = https://mirrors.cat.net/archlinux/\$repo/os/\$arch
+EOF
+
+    # Remove any entries containing '0x.sg'
+    as_su sed -i '/0x.sg/d' /etc/pacman.d/mirrorlist
+fi
 
 }
 
