@@ -97,7 +97,7 @@ function checkpw() {
     then
         PASSWORD=$PASSWD
         clear;
-    else 
+    else
         faillock --user $USER --reset
         echo 'Invalid password. Try again!'
         checkpw
@@ -225,10 +225,10 @@ smart_install_packages() {
         if [[ "$package" =~ ^# ]]; then
             continue
         fi
-        
+
         # Trim leading and trailing whitespace
         package=$(echo "$package" | xargs)
-        
+
         # Check if the package is not empty
         if [ -n "$package" ]; then
             # Call smart_install function for each package
@@ -333,10 +333,10 @@ smart_remove_packages() {
         if [[ "$package" =~ ^# ]]; then
             continue
         fi
-        
+
         # Trim leading and trailing whitespace
         package=$(echo "$package" | xargs)
-        
+
         # Check if the package is not empty
         if [ -n "$package" ]; then
             # Call smart_remove function for each package
@@ -408,7 +408,7 @@ fi
 function install_upgrade() {
     smart_remove networkmanager-iwd;
     smart_install_packages
-    
+
     # release config
     # # Remove /etc/os-release and install the KOOMPI-OS package instead
     # echo -e "[General]\nName=KOOMPI OS\nPRETTY_NAME=KOOMPI OS\nLogoPath=/usr/share/icons/koompi/koompi.svg\nWebsite=http://www.koompi.com\nVersion=2.8.1\nVariant=Rolling Release\nUseOSReleaseVersion=false" | sudo tee /etc/xdg/kcm-about-distrorc >/dev/null 2>&1
@@ -423,7 +423,7 @@ function remove_dropped_packages() {
     # smart_install wireplumber koompi-calamares
     smart_remove_packages
     smart_remove \
-  
+
 }
 
 function update_grub() {
@@ -437,17 +437,17 @@ function update_grub() {
     as_su umount $boot_drive && echo Unmounted $boot_drive >>/tmp/boot.log
     as_su mkfs.fat -F32 $boot_drive &>>/tmp/boot.log
 
-    as_su systemctl daemon-reload 
+    as_su systemctl daemon-reload
     new_boot_drive_uuid=$(lsblk -o uuid $boot_drive | grep -v UUID)
 
     ## The operation is too fast that the UUID doesn't change fast enough causing query of new uuid
-    ## to be the same as old. This caused mount to fail and subsequently grub-install would fail 
-    ## leading to system unbootable. Therefore, this loop requery the UUID until it changes. 
+    ## to be the same as old. This caused mount to fail and subsequently grub-install would fail
+    ## leading to system unbootable. Therefore, this loop requery the UUID until it changes.
     while true;
     do
         if [[ ${new_boot_drive_uuid} == ${old_boot_drive_uuid} ]];
         then
-            sleep 5; 
+            sleep 5;
             new_boot_drive_uuid=$(lsblk -o uuid $boot_drive | grep -v UUID);
         else
             break;
@@ -461,7 +461,7 @@ function update_grub() {
     as_su cat /etc/fstab &>>/tmp/boot.log
     echo -e "=====================================================================================\n" >>/tmp/boot.log
 
-    as_su sed -i "s/$old_boot_drive_uuid/$new_boot_drive_uuid/g" /etc/fstab 
+    as_su sed -i "s/$old_boot_drive_uuid/$new_boot_drive_uuid/g" /etc/fstab
 
     echo "====================================== new fstab ====================================" >>/tmp/boot.log
     as_su cat /etc/fstab &>>/tmp/boot.log
@@ -471,7 +471,7 @@ function update_grub() {
     as_su mkinitcpio -P &>>/tmp/boot.log
 
     echo "" >>/tmp/boot.log
-    as_su grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=KOOMPI_OS --recheck &>>/tmp/boot.log 
+    as_su grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=KOOMPI_OS --recheck &>>/tmp/boot.log
 
     echo "" >>/tmp/boot.log
     as_su grub-mkconfig -o /boot/grub/grub.cfg &>>/tmp/boot.log
@@ -482,17 +482,17 @@ function apply_config() {
     # UPDATE: Added bashrc and bash profile to fix some fcitx5 issue
     as_su cp -r -T /etc/skel/ ${HOME}
     as_su chown ${USER}:users -R ${HOME} &>/dev/null
-    as_su usermod -aG realtime ${USER}
+    #as_su usermod -aG realtime ${USER}
 
-    # Set metadata
-    for file in $HOME/Desktop/*.desktop; do
-        gio set "$file" metadata::trusted true
-    done
+    ## Set metadata
+    #for file in $HOME/Desktop/*.desktop; do
+    #    gio set "$file" metadata::trusted true
+    #done
 
-    # Change permissions
-    for file in $HOME/Desktop/*.desktop; do
-        as_su chmod a+x "$file"
-    done
+    ## Change permissions
+    #for file in $HOME/Desktop/*.desktop; do
+    #    as_su chmod a+x "$file"
+    #done
 
 }
 
